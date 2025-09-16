@@ -9,6 +9,7 @@ all: test-all
 # Define homework directories here
 HW0_DIR = hw0_hello_world
 # HW1_DIR = hw1_... (add new homework here)
+HW2_DIR = hw2_huggingface
 
 
 # ==============================================================================
@@ -21,6 +22,12 @@ test-hw0:
 	@echo ">> Running tests for Homework 0: Hello World"
 	@echo "---------------------------------------"
 	@uv run pytest $(HW0_DIR)/
+
+test-hw2:
+	@echo "---------------------------------------"
+	@echo ">> Running tests for Homework 2: Hugginface & PEFT (Task 1)"
+	@echo "---------------------------------------"
+	@uv run pytest $(HW2_DIR)/
 
 # Add rules for new homework assignments below
 # Example:
@@ -45,6 +52,12 @@ setup:
 	@uv sync
 	@echo "Environment setup complete. You can now run tests with 'make test-hw0' or 'uv run pytest'."
 
+setup_ascend:
+	@echo "Setting up Python environment (ascend npu version) with uv..."
+	@uv sync
+	@uv add torch-npu
+	@echo "Environment setup complete. You can now run tests with 'make test-hw0' or 'uv run pytest'."
+
 # ==============================================================================
 #  UTILITY RULES
 # ==============================================================================
@@ -66,5 +79,6 @@ help:
 	@echo "  make all          - Run all tests for all homework assignments (default)."
 	@echo "  make test-all     - Same as 'make all'."
 	@echo "  make test-hw0     - Run tests specifically for Homework 0."
+	@echo "  make test-hw2     - Run tests specifically for Homework 2."
 	@echo "  make clean        - Remove Python cache files."
 	@echo "  make help         - Display this help message."
