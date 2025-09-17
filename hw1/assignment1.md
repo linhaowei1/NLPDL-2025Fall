@@ -433,7 +433,7 @@ In this part of the assignment, you will build **two** language models from scra
 
 ### 3.1.1 Transformer LM
 
-![Transformer](D:\wxy\curriculum\NLP_TA\Transformer.png)
+***Transformer.png***
 
 Given a sequence of token IDs, the Transformer language model uses an input embedding to convert token IDs to dense vectors, passes the embedded tokens through `num_layers` Transformer blocks, and then applies a learned linear projection (the “output embedding” or “LM head”) to produce the predicted next-token logits.
 
@@ -451,7 +451,7 @@ After `num_layers` Transformer blocks, we will take the final activations and tu
 
 ### 3.1.2 LSTM LM
 
-![LSTM](D:\wxy\curriculum\NLP_TA\LSTM3-chain.png)
+***LSTM3-chain.png***
 
 In contrast to the Transformer LM, the LSTM LM replaces the stacked Transformer blocks with stacked LSTM cells, while keeping the rest of the architecture (token embeddings, output projection) the same. Each LSTM cell takes as input the hidden state and cell state from the previous time step. Concretely, given an input tensor of shape `(batch_size, d_model)`, the LSTM cell outputs a new hidden state of shape `(batch_size, d_model)` and updates its cell state of the same shape. When stacked across `num_layers`, the hidden states are sequentially passed upward through the layers and across the sequence.
 
@@ -459,8 +459,8 @@ In contrast to the Transformer LM, the LSTM LM replaces the stacked Transformer 
 
 Training neural networks effectively often requires careful initialization of the model parameters—bad initializations can lead to undesirable behavior such as vanishing or exploding gradients. Pre-norm transformers are unusually robust to initializations, but they can still have a significant impact on training speed and convergence. In this assignment, use:
 
-- **Linear weights**:  $$ \mathcal{N}\left(\mu = 0, \sigma^2 = \frac{2}{d_{\text{in}} + d_{\text{out}}}\right)\text{ truncated at }[-3\sigma, 3\sigma].$$
-- **Embedding**: $$\mathcal{N}\left(\mu = 0, \sigma^2 = 1\right)\text{ truncated at }[-3, 3].$$
+- **Linear weights**:  $$ \mathcal{N}\left(\mu = 0, \sigma^2 = \frac{2}{d_{\text{in}} + d_{\text{out}}}\right)\text{ truncated at }[-3\sigma, 3\sigma]$$
+- **Embedding**:  $$\mathcal{N}\left(\mu = 0, \sigma^2 = 1\right)\text{ truncated at }[-3, 3]$$
 - **RMSNorm**: $$1$$
 
 You should use `torch.nn.init.trunc_normal_` to initialize the truncated normal weights.
@@ -469,13 +469,12 @@ You should use `torch.nn.init.trunc_normal_` to initialize the truncated normal 
 
 Linear layers are a fundamental building block of neural nets in general. First, you will implement your own Linear class that inherits from `torch.nn.Module` and performs a linear transformation:
 
-\[
+$$
 y = \begin{cases}
     W x & \text{if no bias} \\
     W x + b & \text{if bias is used}
 \end{cases}
-\]
-
+$$
 Note that the bias term is optional and is set to **"no bias"** by default, following the convention of most modern Transformer-based LLMs. However, in accordance with common practice, the LSTM implementation will include this term.
 
 >**Problem 3.2.1: Implementing the linear module (1 point)**
@@ -597,19 +596,16 @@ In the original Transformer paper, the model uses a residual connection around e
 
 The original Transformer implementation of [Vaswani et al., 2017] uses layer normalization [Ba et al., 2016] to normalize activations. Following [Touvron et al., 2023], we will use root mean square layer normalization (RMSNorm; [Zhang and Sennrich, 2019, equation 4]) for layer normalization.  
 
-Given a vector \( a \in \mathbb{R}^{d_{\text{model}}} \) of activations, RMSNorm will rescale each activation \( a_i \) as follows:
+Given a vector $ a \in \mathbb{R}^{d_{\text{model}}} $ of activations, RMSNorm will rescale each activation $ a_i $ as follows:
 
-\[
-\text{RMSNorm}(a_i) = \frac{a_i}{\text{RMS}(a)} g_i,
-\]
-
+$$
+\text{RMSNorm}(a_i) = \frac{a_i}{\text{RMS}(a)} g_i
+$$
 where
-
-\[
+$$
 \text{RMS}(a) = \sqrt{\frac{1}{d_{\text{model}}} \sum_{i=1}^{d_{\text{model}}} a_i^2 + \varepsilon}.
-\]
-
-Here, \( g_i \) is a learnable *gain* parameter (there are `d_model` such parameters total), and \( \varepsilon \) is a hyperparameter that is often fixed at \( 1 \times 10^{-5} \).
+$$
+Here, $$ g_i $$ is a learnable *gain* parameter (there are `d_model` such parameters total), and $$\varepsilon $$ is a hyperparameter that is often fixed at $$ 1 \times 10^{-5} $$.
 
 You should upcast your input to `torch.float32` to prevent overflow when you square the input. Overall, your `forward` method should look like:
 
@@ -672,33 +668,30 @@ return result.to(in_dtype)
 
 ### 3.3.2  Position-Wise Feed-Forward Network
 
-In the original Transformer paper (section 3.3 of [Vaswani et al., 2017]), the Transformer feed-forward network consists of two linear transformations with a ReLU activation (\(\text{ReLU}(x) = \max(0, x)\)) between them. The dimensionality of the inner feed-forward layer is typically 4x the input dimensionality.  
+In the original Transformer paper (section 3.3 of [Vaswani et al., 2017]), the Transformer feed-forward network consists of two linear transformations with a ReLU activation ($\text{ReLU}(x) = \max(0, x)$) between them. The dimensionality of the inner feed-forward layer is typically 4x the input dimensionality.  
 
 However, modern language models tend to incorporate two main changes compared to this original design: they use another activation function and employ a gating mechanism. Specifically, we will implement the “SwiGLU” activation function adopted in LLMs like Llama 3 [Grattafiori et al., 2024] and Qwen 2.5 [Yang et al., 2024], which combines the SiLU (often called Swish) activation with a gating mechanism called a Gated Linear Unit (GLU). We will also omit the bias terms sometimes used in linear layers, following most modern LLMs since PaLM [Chowdhery et al., 2022] and LLaMA [Touvron et al., 2023].  
 
 The SiLU or Swish activation function [Hendrycks and Gimpel, 2016, Elfwing et al., 2017] is defined as follows:
 
-\[
+$$
 \text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}
-\]
-
+$$
 As can be seen in Figure 3, the SiLU activation function is similar to the ReLU activation function, but is smooth at zero.  
 
 Gated Linear Units (GLUs) were originally defined by [Dauphin et al., 2017] as the element-wise product of a linear transformation passed through a sigmoid function and another linear transformation:
 
-\[
+$$
 \text{GLU}(x, W_1, W_2) = \sigma(W_1 x) \odot W_2 x,
-\]
-
-where \(\odot\) represents element-wise multiplication. Gated Linear Units are suggested to “reduce the vanishing gradient problem for deep architectures by providing a linear path for the gradients while retaining non-linear capabilities.”  
+$$
+where $\odot$ represents element-wise multiplication. Gated Linear Units are suggested to “reduce the vanishing gradient problem for deep architectures by providing a linear path for the gradients while retaining non-linear capabilities.”  
 
 Putting the SiLU/Swish and GLU together, we get the **SwiGLU**, which we will use for our feed-forward networks:
 
-\[
+$$
 \text{FFN}(x) = \text{SwiGLU}(x, W_1, W_2, W_3) = W_2 \big(\text{SiLU}(W_1 x) \odot W_3 x \big),
-\]
-
-where \(x \in \mathbb{R}^{d_{\text{model}}}\), \(W_1, W_3 \in \mathbb{R}^{d_{\text{ff}} \times d_{\text{model}}}\), \(W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{ff}}}\), and canonically, \(d_{\text{ff}} = \tfrac{8}{3} d_{\text{model}}\).
+$$
+where $x \in \mathbb{R}^{d_{\text{model}}}$, $W_1, W_3 \in \mathbb{R}^{d_{\text{ff}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{ff}}}$, and canonically, $d_{\text{ff}} = \tfrac{8}{3} d_{\text{model}}$.
 
 >**Problem 3.3.2:  Implement the position-wise feed-forward network (1 point)**
 >
@@ -747,33 +740,30 @@ where \(x \in \mathbb{R}^{d_{\text{model}}}\), \(W_1, W_3 \in \mathbb{R}^{d_{\te
 
 ### 3.3.3 Relative Positional Embedding
 
-To inject positional information into the model, we will implement Rotary Position Embeddings [Su et al., 2021], often called RoPE. For a given query token \( q^{(i)} = W_q x^{(i)} \in \mathbb{R}^d \) at token position \( i \), we will apply a pairwise rotation matrix \( R^i \), giving us  
+To inject positional information into the model, we will implement Rotary Position Embeddings [Su et al., 2021], often called RoPE. For a given query token $ q^{(i)} = W_q x^{(i)} \in \mathbb{R}^d $ at token position $i$, we will apply a pairwise rotation matrix $R^i$, giving us  
 
-\[
+$$
 q'^{(i)} = R^i q^{(i)} = R^i W_q x^{(i)}.
-\]
+$$
+Here, $R^i$ will rotate pairs of embedding elements $q^{(i)}_{2k-1:2k}$ as 2d vectors by the angle  
 
-Here, \( R^i \) will rotate pairs of embedding elements \( q^{(i)}_{2k-1:2k} \) as 2d vectors by the angle  
-
-\[
+$$
 \theta_{i,k} = \frac{i}{\Theta^{(2k-2)/d}} \quad \text{for } k \in \{1, \dots, d/2\},
-\]
+$$
+and some constant $\Theta$.  
 
-and some constant \(\Theta\).  
+Thus, we can consider $R^i$ to be a block-diagonal matrix of size  $d \times d$, with blocks $R^i_k$ for $k \in \{1, \dots, d/2\}$, with  
 
-Thus, we can consider \( R^i \) to be a block-diagonal matrix of size \( d \times d \), with blocks \( R^i_k \) for \( k \in \{1, \dots, d/2\} \), with  
-
-\[
+$$
 R^i_k =
 \begin{bmatrix}
 \cos(\theta_{i,k}) & -\sin(\theta_{i,k}) \\
 \sin(\theta_{i,k}) & \cos(\theta_{i,k})
 \end{bmatrix}.
-\]
-
+$$
 Thus we get the full rotation matrix  
 
-\[
+$$
 R^i =
 \begin{bmatrix}
 R^i_1 & 0 & 0 & \dots & 0 \\
@@ -782,11 +772,10 @@ R^i_1 & 0 & 0 & \dots & 0 \\
 \vdots & \vdots & \vdots & \ddots & \vdots \\
 0 & 0 & 0 & \dots & R^i_{d/2}
 \end{bmatrix},
-\]
+$$
+where 0s represent $2 \times 2$ zero matrices.  
 
-where 0s represent \( 2 \times 2 \) zero matrices.  
-
-While one could construct the full \( d \times d \) matrix, a good solution should use the properties of this matrix to implement the transformation more efficiently. Since we only care about the relative rotation of tokens within a given sequence, we can reuse the values we compute for \(\cos(\theta_{i,k})\) and \(\sin(\theta_{i,k})\) across layers, and different batches.  
+While one could construct the full $ d \times d $ matrix, a good solution should use the properties of this matrix to implement the transformation more efficiently. Since we only care about the relative rotation of tokens within a given sequence, we can reuse the values we compute for $\cos(\theta_{i,k})$ and $\sin(\theta_{i,k})$ across layers, and different batches.  
 
 If you would like to optimize it, you may use a single RoPE module referenced by all layers, and it can have a 2d pre-computed buffer of sin and cos values created during init with  
 
@@ -844,11 +833,10 @@ self.register_buffer(persistent=False)
 We will now implement scaled dot-product attention as described in [Vaswani et al., 2017] (section 3.2.1). 
 
 As a preliminary step, the definition of the Attention operation will make use of softmax, an operation that takes an unnormalized vector of scores and turns it into a normalized distribution:
-\[
+$$
 \text{softmax}(v)_i = \frac{\exp(v_i)}{\sum_{j=1}^n \exp(v_j)}.
-\]
-
-Note that \(\exp(v_i)\) can become inf for large values (then, \( \text{inf}/\text{inf} = \text{NaN} \)). We can avoid this by noticing that the softmax operation is invariant to adding any constant \( c \) to all inputs. We can leverage this property for numerical stability—typically, we will subtract the largest entry of \( o_i \) from all elements of \( o_i \), making the new largest entry 0.  You will now implement softmax, using this trick for numerical stability.
+$$
+Note that $\exp(v_i)$ can become inf for large values (then, $ \text{inf}/\text{inf} = \text{NaN} $). We can avoid this by noticing that the softmax operation is invariant to adding any constant $ c $to all inputs. We can leverage this property for numerical stability—typically, we will subtract the largest entry of $o_i$ from all elements of $o_i$, making the new largest entry 0.  You will now implement softmax, using this trick for numerical stability.
 
 >**Problem 3.3.4.1: Implement softmax (1point)**
 >
@@ -886,15 +874,14 @@ Note that \(\exp(v_i)\) can become inf for large values (then, \( \text{inf}/\te
 
 We can now define the Attention operation mathematically as follows:
 
-\[
+$$
 \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V
-\]
+$$
+where $Q \in \mathbb{R}^{n \times d_k}, \; K \in \mathbb{R}^{m \times d_k}, \; V \in \mathbb{R}^{m \times d_v} $.  Here, $ Q, K, V $ are all inputs to this operation — note that these are not the learnable parameters.  
 
-where \( Q \in \mathbb{R}^{n \times d_k}, \; K \in \mathbb{R}^{m \times d_k}, \; V \in \mathbb{R}^{m \times d_v} \).  Here, \( Q, K, V \) are all inputs to this operation — note that these are not the learnable parameters.  
+**Masking.** It is sometimes convenient to *mask* the output of an attention operation. A mask should have the shape $M \in \{\text{True}, \text{False}\}^{n \times m} $, and each row $i$ of this boolean matrix indicates which keys the query $i$ should attend to.  Canonically (and slightly confusingly), a value of **True** at position $(i, j)$ indicates that the query $ i $ *does* attend to the key $ j $ and a value of **False** indicates that the query *does not* attend to the key.  In other words, “information flows” at $(i, j)$ pairs with value **True**.  For example, consider a $ 1 \times 3 $ mask matrix with entries `[[True, True, False]]`.  The single query vector attends only to the first two keys.  
 
-**Masking.** It is sometimes convenient to *mask* the output of an attention operation. A mask should have the shape \( M \in \{\text{True}, \text{False}\}^{n \times m} \), and each row \( i \) of this boolean matrix indicates which keys the query \( i \) should attend to.  Canonically (and slightly confusingly), a value of **True** at position \((i, j)\) indicates that the query \( i \) *does* attend to the key \( j \) and a value of **False** indicates that the query *does not* attend to the key.  In other words, “information flows” at \((i, j)\) pairs with value **True**.  For example, consider a \( 1 \times 3 \) mask matrix with entries `[[True, True, False]]`.  The single query vector attends only to the first two keys.  
-
-Computationally, it will be much more efficient to use masking than to compute attention on subsequences, and we can do this by taking the pre-softmax values \(\frac{Q K^\top}{\sqrt{d_k}}\) and adding a \(-\infty\) in any entry of the mask matrix that is **False**.
+Computationally, it will be much more efficient to use masking than to compute attention on subsequences, and we can do this by taking the pre-softmax values $\frac{Q K^\top}{\sqrt{d_k}}$ and adding a $-\infty$ in any entry of the mask matrix that is **False**.
 
 >**Problem 3.3.4.2: Implement scaled dot-product attention (5 points)**
 >
@@ -942,30 +929,30 @@ Computationally, it will be much more efficient to use masking than to compute a
 
 We will implement multi-head self-attention as described in section 3.2.2 of [Vaswani et al., 2017]. Recall that, mathematically, the operation of applying multi-head attention is defined as follows:
 
-\[
+$$
 \text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)
-\]
-\[
-\text{for head}_i = \text{Attention}(Q_i, K_i, V_i)
-\]
+$$
 
-with \( Q_i, K_i, V_i \) being slice number \( i \in \{1, \ldots, h\} \) of size \( d_k \) or \( d_v \) of the embedding dimension for \( Q, K, V \) respectively.  
+$$
+\text{for head}_i = \text{Attention}(Q_i, K_i, V_i)
+$$
+
+with $ Q_i, K_i, V_i $ being slice number $ i \in \{1, \ldots, h\} $ of size $ d_k $ or $ d_v $ of the embedding dimension for $ Q, K, V $ respectively.  
 
 With Attention being the scaled dot-product attention operation defined in §3.3.4, from this we can form the multi-head *self-attention* operation:
 
-\[
+$$
 \text{MultiHeadSelfAttention}(x) = W_O \, \text{MultiHead}(W_Q x, W_K x, W_V x)
-\]
+$$
+Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{model}} $, $ W_K \in \mathbb{R}^{h d_k \times d_\text{model}} $, $ W_V \in \mathbb{R}^{h d_v \times d_\text{model}} $ , and $ W_O \in \mathbb{R}^{d_\text{model} \times h d_v} $. Since the $ Q $s, $ K $, and $ V $s are sliced in the multi-head attention operation, we can think of $ W_Q, W_K, W_V $ as being separated for each head along the output dimension. When you have this working, you should be computing the key, value, and query projections in a total of three matrix multiplies to be compatible with test code.
 
-Here, the learnable parameters are \( W_Q \in \mathbb{R}^{h d_k \times d_\text{model}} \), \( W_K \in \mathbb{R}^{h d_k \times d_\text{model}} \), \( W_V \in \mathbb{R}^{h d_v \times d_\text{model}} \) , and \( W_O \in \mathbb{R}^{d_\text{model} \times h d_v} \). Since the \( Q \)s, \( K \), and \( V \)s are sliced in the multi-head attention operation, we can think of \( W_Q, W_K, W_V \) as being separated for each head along the output dimension. When you have this working, you should be computing the key, value, and query projections in a total of three matrix multiplies to be compatible with test code.
-
-**Causal masking.** Your implementation should prevent the model from attending to future tokens in the sequence.  In other words, if the model is given a token sequence \( t_1, \ldots, t_n \), and we want to calculate the next-word predictions for the prefix \( t_1, \ldots, t_i \) (where \( i < n \)), the model should **not** be able to access (attend to) the token representations at positions \( t_{i+1}, \ldots, t_n \), since it will not have access to these tokens when generating text during inference (and these future tokens leak information about the identity of the true next word, trivializing the language modeling pre-training objective).  For an input token sequence \( t_1, \ldots, t_n \), we can naively prevent access to future tokens by running multi-head self-attention \( n \) times (for the \( n \) unique prefixes in the sequence). Instead, we’ll use **causal attention masking**, which allows token \( i \) to attend to all positions \( j \leq i \) in the sequence. You can use `torch.triu / torch.tril` or a broadcasted index comparison to construct this mask, and you should take advantage of the fact that your scaled dot-product attention implementation from §3.5.4 already supports attention masking.
+**Causal masking.** Your implementation should prevent the model from attending to future tokens in the sequence.  In other words, if the model is given a token sequence $ t_1, \ldots, t_n $, and we want to calculate the next-word predictions for the prefix $ t_1, \ldots, t_i $ (where $ i < n $), the model should **not** be able to access (attend to) the token representations at positions $ t_{i+1}, \ldots, t_n $, since it will not have access to these tokens when generating text during inference (and these future tokens leak information about the identity of the true next word, trivializing the language modeling pre-training objective).  For an input token sequence $ t_1, \ldots, t_n $, we can naively prevent access to future tokens by running multi-head self-attention $ n $ times (for the $ n $ unique prefixes in the sequence). Instead, we’ll use **causal attention masking**, which allows token $ i $ to attend to all positions $ j \leq i $ in the sequence. You can use `torch.triu / torch.tril` or a broadcasted index comparison to construct this mask, and you should take advantage of the fact that your scaled dot-product attention implementation from §3.5.4 already supports attention masking.
 
 **Applying RoPE.** RoPE should be applied to the query and key vectors, but not the value vectors.  Also, the head dimension should be handled as a batch dimension, because in multi-head attention, attention is being applied independently for each head. This means that precisely the same RoPE rotation should be applied to the query and key vectors for each head.
 
 >**Problem 3.3.5: Implement causal multi-head self-attention (5 points)**
 >
->Implement class `CasualMultiHeadSelfAttention` as a `torch.nn.Module`. Your implementation should following *Vaswani et al. (2017)*, set  \(d_k = d_v = \frac{d_{\text{model}}}{h}\).
+>Implement class `CasualMultiHeadSelfAttention` as a `torch.nn.Module`. Your implementation should following *Vaswani et al. (2017)*, set  $d_k = d_v = \frac{d_{\text{model}}}{h}$.
 >
 >The following interface is recommended:
 >
@@ -1026,11 +1013,11 @@ Here, the learnable parameters are \( W_Q \in \mathbb{R}^{h d_k \times d_\text{m
 
 Let’s begin by assembling the Transformer block. A Transformer block contains two *sublayers*: one for the multi-head self-attention, and another for the feed-forward network. In each sublayer, we first perform RMSNorm, then the main operation (MHA / FF), and finally add in the residual connection.
 
-To be concrete, the first half (the first *sublayer*) of the Transformer block should be implementing the following set of updates to produce an output \( y \) from an input \( x \):
+To be concrete, the first half (the first *sublayer*) of the Transformer block should be implementing the following set of updates to produce an output $ y $ from an input $ x $:
 
-\[
+$$
 y = x + \text{MultiHeadSelfAttention}(\text{RMSNorm}(x))
-\]
+$$
 
 >**Problem 3.4.1: Implement the Transformer block (3 points)**
 >
@@ -1281,6 +1268,46 @@ Smoothly, you can put the `LSTM` together with other modules you have already de
 >Implement a `LSTM_LM` as a `torch.nn.Module` to serve as an LSTM-based LM.
 >
 >The following interface is recommended:
+>
+>```python
+>class LSTMLM(nn.Module):
+>"""LSTM-based language model."""
+>
+>def __init__(
+>   self,
+>   vocab_size: int,
+>   d_model: int,
+>   num_layers: int,
+>   device: Optional[torch.device] = None,
+>   dtype: Optional[torch.dtype] = None,
+>) -> None:
+>   """Initializes the LSTM language model.
+>
+>   Args:
+>       vocab_size (int): Size of the vocabulary.
+>       d_model (int): Hidden dimension of the LSTM.
+>       num_layers (int): Number of LSTM layers.
+>       device (torch.device, optional): Device to store parameters. Defaults to None.
+>       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>   """
+>   ...
+>
+>def forward(
+>   self, input_ids: Tensor, state: Optional[Tuple[Tensor, Tensor]] = None
+>) -> Tensor:
+>   """Applies the LSTM language model.
+>
+>   Args:
+>       input_ids (torch.Tensor): Token IDs of shape (batch_size, seq_len).
+>       state (tuple[torch.Tensor, torch.Tensor], optional): Tuple of
+>           (hidden_states, cell_states), each of shape
+>           (num_layers, batch_size, d_model). Defaults to None.
+>
+>   Returns:
+>       torch.Tensor: Logits of shape (batch_size, seq_len, vocab_size).
+>   """
+>   ...
+>```
 
 # 4 Training a Transformer LM
 
@@ -1646,7 +1673,54 @@ Now, it's finally time to put all of the components you implemented together int
 
 > **What if the dataset is too big to load into memory?** We can use a Unix systemcall named `mmap` which maps a file on disk to virtual memory, and lazily loads the file contents when that memory location is accessed. Thus, you can "pretend" you have the entire dataset in memory. Numpy implements this through `np.memmap` (or the flag `mmap_mode='r'` to `np.load`, if you originally saved the array with `np.save`), which will return a numpy array-like object that loads the entries on-demand as you access them. When sampling from your dataset (i.e., a numpy array) during training, be sure load the dataset in memorymapped mode (via `np.memmap` or the flag `mmap_mode='r'` to `np.load`, depending on how you saved the array). Make sure you also specify a `dtype` that matches the array that you're loading. It may be helpful to explicitly verify that the memory-mapped data looks correct $\mathrm{(e.g.}$ doesn't contain values beyond the expected vocabulary size).
 
+# 6 Generating Text
 
+Now that we can train models, the last piece we need is the ability to generate text from our model. Recall that a language model takes in a (possibly batched) integer sequence of length `(sequence_length)` and produces a matrix of size `(sequence_length × vocab_size)`, where each element of the sequence is a probability distribution predicting the next word after that position. We will now write a few functinto a sampling scheme for new sequences.
+
+**Softmax.** By standard convention, the language model output is the output of the final linear layer (the “logits”) and so we have to turn this into a normalized probability via the *softmax* operation.
+
+**Decoding.** To generate text (decode) from our model, we will provide the model with a sequence of prefix tokens (the “prompt”), and ask it to produce a probability distribution over the vocabulary that predicts the next word in the sequence. Then, we will sample from this distribution over vocabulary items to determine the next output token.
+
+Concretely, one step of the decoding process should take in a sequence $x_{1..t}$ and return a token $x_{t+1}$ via the following equation:
+
+$$
+P(x_{t+1} = i \mid x_{1..t}) = \frac{\exp(v_i)}{\sum_j \exp(v_j)}, \quad
+v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocab\_size}}
+$$
+
+where TransformerLM is our model which takes as input a sequence of `sequence_length` and produces a matrix of size `(sequence_length × vocab_size)`. We take the last element of this matrix, as we are looking for the next word prediction at the $t$-th position.
+
+This gives us a basic decoder by repeatedly sampling from these one-step conditionals (appending our previously-generated output token to the input of the next decoding timestep) until we generate the end-of-sequence token `<|endoftext|>` (or a user-specified maximum number of tokens to generate).
+
+**Decoder tricks.** We will be experimenting with small models, and small models can sometimes generate very low quality texts. Two simple decoder tricks can help fix these issues.
+
+**First**, in *temperature scaling* we modify our softmax with a temperature parameter $\tau$, where the new softmax is:
+$$
+\text{softmax}(v, \tau)_i = \frac{\exp(v_i / \tau)}{\sum_{j=1}^{|\text{vocab\_size}|} \exp(v_j / \tau)} \tag{24}
+$$
+
+Note how setting $\tau \to 0$ makes it so that the largest element of $v$ dominates, and the output of the softmax becomes a one-hot vector concentrated at this maximal element.  
+
+**Second**, another trick is *nucleus* or *top-$p$ sampling*, where we modify the sampling distribution by truncating low-probability words. Let $q$ be a probability distribution that we get from a (temperature-scaled) softmax of size `(vocab_size)`. Nucleus sampling with hyperparameter $p$ produces the next token according to the equation:
+$$
+P(x_{t+1} = i \mid q) = 
+\begin{cases} 
+\frac{q_i}{\sum_{j \in V(p)} q_j} & \text{if } i \in V(p) \\ 
+0 & \text{otherwise} 
+\end{cases}
+$$
+
+where $V(p)$ is the *smallest* set of indices such that $\sum_{j \in V(p)} q_j \geq p$.  You can compute this quantity easily by first sorting the probability distribution $q$ by magnitude, and selecting the largest vocabulary elements until you reach the target level of $\alpha$.
+
+>**Problem 6: Decoding (3points)**
+>
+>Implement two functions to decode from your Transformer_LM and LSTM_LM respectively. Your functions need to support the temperature scaling and top-p sampling tricks described above. We recommend you to implement the functions as instance functions of your LM classes.
+>
+>The following interface is recommended:
+>
+>```python
+>
+>```
 
 
 
