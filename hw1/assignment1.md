@@ -446,10 +446,10 @@ $$
 In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocab\_size}}$ for each position $i$, which results in:
 
 $$
-p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocab\_size}} \exp(o_i[a])}.
+p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocabsize}} \exp(o_i[a])}.
 $$
 
-The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocab\_size}}$ and target $x_{i+1}$.
+The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ and target $x_{i+1}$.
 
 Implementing the cross entropy loss requires some care with numerical issues, just like in the case of softmax.
 
