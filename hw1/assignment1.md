@@ -443,13 +443,13 @@ $$
 
 (Note that a single forward pass in the Transformer yields $p_{\theta}(x_{i+1} \mid x_{1:i})$ for all $i = 1, \ldots, m.$）
 
-In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ for each position $i$, which results in:
+In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocab\textunderscore size}}$ for each position $i$, which results in:
 
 $$
-p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocabsize}} \exp(o_i[a])}.
+p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocab\textunderscore size}} \exp(o_i[a])}.
 $$
 
-The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ and target $x_{i+1}$.
+The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocab\textunderscore size}}$ and target $x_{i+1}$.
 
 Implementing the cross entropy loss requires some care with numerical issues, just like in the case of softmax.
 
@@ -620,7 +620,7 @@ Note that $t$ starts at 1. You will now implement this optimizer.
 >
 > (b) Instantiate your answer for a GPT-2XL-shaped model to get an expression that only depends on the `batch_size`. What is the maximum batch size you can use and still fit within 80GB memory?
 >
-> **Deliverable**: An expression that looks like $a \cdot \text{batch\_size} + b$ for numerical values $a, b$, and a number representing the maximum batch size.
+> **Deliverable**: An expression that looks like $a \cdot \text{batch\textunderscore size} + b$ for numerical values $a, b$, and a number representing the maximum batch size.
 >
 > (c) How many FLOPs does running one step of AdamW take?
 >
