@@ -1586,11 +1586,11 @@ Given the gradient (for all parameters) $g$, we compute its $\ell_2$-norm $\|g\|
 
 
 
-### 5 Training loop
+#5 Training loop
 
 We will now finally put together the major components we've built so far: the tokenized data, the model, and the optimizer. 
 
-#### 5.1 Data Loader
+## 5.1 Data Loader
 
 The tokenized data (e.g., that you prepared in `tokenizer_experiments`) is a single sequence of tokens $x=(x_{1},\ldots,x_{n})$. Even though the source data might consist of separate documents (e.g., different web pages, or source code files), a common practice is to concatenate all of those into a single sequence of tokens, adding a delimiter between them (such as the `<|endoftext|>` token).
 
@@ -1612,7 +1612,7 @@ Loading data in this way simplifies training for a number of reasons. First, any
 
 
 
-#### 5.2 Checkpointing
+## 5.2 Checkpointing
 
 In addition to loading data, we will also need to save models as we train. When running jobs, we often want to be able to resume a training run that for some reason stopped midway (e.g., due to your job timing out, machine failure, etc). Even when all goes well, we might also want to later have access to intermediate models (e.g., to study training dynamics post-hoc, take samples from models at different stages of training,
 
@@ -1654,7 +1654,7 @@ A checkpoint should have all the states that we need to resume training. We of c
 
 
 
-#### 5.3 Training loop
+## 5.3 Training loop
 
 Now, it's finally time to put all of the components you implemented together into your main training script. It will pay off to make it easy to start training runs with different hyperparameters (e.g., by taking them as command-line arguments), since you will be doing these many times later to study how different choices impact training.
 
