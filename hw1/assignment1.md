@@ -443,7 +443,7 @@ $$
 
 (Note that a single forward pass in the Transformer yields $p_{\theta}(x_{i+1} \mid x_{1:i})$ for all $i = 1, \ldots, m.$）
 
-In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocab\_size}}$ for each position $i$, which results in:
+In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ for each position $i$, which results in:
 
 $$
 p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocabsize}} \exp(o_i[a])}.
