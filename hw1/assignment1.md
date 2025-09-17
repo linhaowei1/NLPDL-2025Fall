@@ -1325,15 +1325,15 @@ $$
 \ell(\theta; D) = \frac{1}{|D| m} \sum_{x \in D} \sum_{i=1}^{m} -\log p_{\theta}(x_{i+1} \mid x_{1:i}).
 $$
 
-(Note that a single forward pass in the Transformer yields $p_{\theta}(x_{i+1} \mid x_{1:i})$ for all $i = 1, \ldots, m.$）
+> Note that a single forward pass in the Transformer yields $p_{\theta}(x_{i+1} \mid x_{1:i})$ for all $i = 1, \ldots, m.$
 
-In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocab\_ size}}$ for each position $i$, which results in:
+In particular, the Transformer computes logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ for each position $i$, which results in:
 
 $$
-p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocab\textunderscore size}} \exp(o_i[a])}.
+p(x_{i+1} \mid x_{1:i}) = \text{softmax}(o_i)[x_{i+1}] = \frac{\exp(o_i[x_{i+1}])}{\sum_{a=1}^{\text{vocabsize}} \exp(o_i[a])}.
 $$
 
-The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocab\textunderscore size}}$ and target $x_{i+1}$.
+The cross entropy loss is generally defined with respect to the vector of logits $o_i \in \mathbb{R}^{\text{vocabsize}}$ and target $x_{i+1}$.
 
 Implementing the cross entropy loss requires some care with numerical issues, just like in the case of softmax.
 
@@ -1502,9 +1502,9 @@ Note that $t$ starts at 1. You will now implement this optimizer.
 >
 > **Deliverable**: An algebraic expression for each of parameters, activations, gradients, and optimizer state, as well as the total.
 >
-> (b) Instantiate your answer for a GPT-2XL-shaped model to get an expression that only depends on the `batch_size`. What is the maximum batch size you can use and still fit within 80GB memory?
+> (b) Instantiate your answer for a GPT-2XL-shaped model to get an expression that only depends on the `batchsize`. What is the maximum batch size you can use and still fit within 80GB memory?
 >
-> **Deliverable**: An expression that looks like $a \cdot \text{batch\textunderscore size} + b$ for numerical values $a, b$, and a number representing the maximum batch size.
+> **Deliverable**: An expression that looks like $a \cdot \text{batchsize} + b$ for numerical values $a, b$, and a number representing the maximum batch size.
 >
 > (c) How many FLOPs does running one step of AdamW take?
 >
@@ -1685,7 +1685,7 @@ Concretely, one step of the decoding process should take in a sequence $x_{1..t}
 
 $$
 P(x_{t+1} = i \mid x_{1..t}) = \frac{\exp(v_i)}{\sum_j \exp(v_j)}, \quad
-v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocab\_size}}
+v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocabsize}}
 $$
 
 where TransformerLM is our model which takes as input a sequence of `sequence_length` and produces a matrix of size `(sequence_length × vocab_size)`. We take the last element of this matrix, as we are looking for the next word prediction at the $t$-th position.
@@ -1701,7 +1701,7 @@ $$
 
 Note how setting $\tau \to 0$ makes it so that the largest element of $v$ dominates, and the output of the softmax becomes a one-hot vector concentrated at this maximal element.  
 
-**Second**, another trick is *nucleus* or *top-$p$ sampling*, where we modify the sampling distribution by truncating low-probability words. Let $q$ be a probability distribution that we get from a (temperature-scaled) softmax of size `(vocab_size)`. Nucleus sampling with hyperparameter $p$ produces the next token according to the equation:
+**Second**, another trick is *nucleus* or *top-$p$ sampling*, where we modify the sampling distribution by truncating low-probability words. Let $q$ be a probability distribution that we get from a (temperature-scaled) softmax of size `(vocabsize)`. Nucleus sampling with hyperparameter $p$ produces the next token according to the equation:
 $$
 P(x_{t+1} = i \mid q) = 
 \begin{cases} 
