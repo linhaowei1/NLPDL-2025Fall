@@ -432,7 +432,7 @@ In this assignment, you will implement **two** language models from scratch: one
 
 ### 3.1.1 Transformer LM
 
-![Transformer](fig/Transformer.png)
+![Transformer](fig/Transformer.jpg)
 
 A Transformer language model processes a sequence of token IDs by first converting them into dense vectors via an input embedding. These embedded tokens then pass through `num_layers` Transformer blocks, and finally through a linear output projection (the “LM head”) to produce next-token logits.
 
@@ -450,7 +450,7 @@ After the final Transformer block, a layer normalization is applied to stabilize
 
 ### 3.1.2 LSTM LM
 
-![LSTM](fig/LSTM.png)
+![LSTM](fig/LSTM.jpg)
 
 In contrast to the Transformer, the LSTM-based language model replaces the Transformer blocks with stacked LSTM layers, while retaining the same token embedding and output projection components. Each LSTM cell receives the hidden state and cell state from the previous timestep. Specifically, for an input tensor of shape `(batch_size, d_model)`, the LSTM cell produces an updated hidden state and cell state, both of shape `(batch_size, d_model)`. When multiple layers are stacked (`num_layers`), hidden states propagate upward through the layers and sequentially across the time steps.
 
