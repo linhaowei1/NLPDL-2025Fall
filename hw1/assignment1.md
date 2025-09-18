@@ -96,7 +96,7 @@ Unicode is a text encoding standard that maps characters to integer code points.
 
 
 
-> **Problem 2.1: Understanding Unicode (1 point)**
+> **Problem 2.1: Understanding Unicode (3 points)**
 >
 > **(a)** What Unicode character does chr(0) return? 
 >
@@ -274,7 +274,7 @@ This chunking will always be valid, since we never want to merge across document
 
 
 
-> **Problem 2.3(train_bpe): BPE Tokenizer Training (15 points)**
+> **Problem 2.4.1(train_bpe): BPE Tokenizer Training (15 points)**
 > 
 > Write a function that, given a path to an input text file, trains a (byte-level) BPE tokenizer. Your BPE training function should handle (at least) the following input parameters:
 > 
@@ -294,7 +294,7 @@ This chunking will always be valid, since we never want to merge across document
 > Your implementation should be able to pass all tests.
 
 
-> **Problem 2.4: BPE Training on TinyStories (2 points)**
+> **Problem 2.4.2: BPE Training on TinyStories (2 points)**
 > 
 > **(a)** Train a byte-level BPE tokenizer on the TinyStories dataset, using a maximum vocabulary size of 10,000. Make sure to add the TinyStories `<|endoftext|>` special token to the vocabulary. Serialize the resulting vocabulary and merges to disk for further inspection. How many hours and memory did training take? What is the longest token in the vocabulary? Does it make sense?
 > 
@@ -411,7 +411,7 @@ Note that input IDs are not guaranteed to map to valid Unicode strings (since a 
 
 
 
-> **Problem 2.6: Experiments with tokenizers (4 points)**
+> **Problem 2.6: Experiments with tokenizers (3 points)**
 > 
 > (a) Sample 10 documents from TinyStories. Using your previously-trained TinyStories tokenizers (10K vocabulary size), encode these sampled documents into integer IDs. What is the tokenizer's compression ratio (bytes/token)?
 > 
@@ -420,47 +420,46 @@ Note that input IDs are not guaranteed to map to valid Unicode strings (since a 
 > (c) Using your TinyStories tokenizers, encode the respective training and development datasets into a sequence of integer token IDs. We'll use this later to train our language model. We recommend serializing the token IDs as a NumPy array of datatype uint16. Why is uint16 an appropriate choice?
 
 
-
 # 3 LSTM & Transformer Language Model
 
-A **next-token-prediction-based language model** (shorted as language model or LM in this doc) takes as input a batched sequence of integer token IDs (i.e., `torch.Tensor` of shape `(batch_size, sequence_length)`), and returns a (batched) normalized probability distribution over the vocabulary (i.e., a PyTorch Tensor of shape `(batch_size, sequence_length, vocab_size)`), where the predicted distribution is over the next word for each input token. 
+A **next-token-prediction language model** (abbreviated as LM in this document) takes a batched sequence of integer token IDs (i.e., a `torch.Tensor` of shape `(batch_size, sequence_length)`) as input and returns a normalized probability distribution over the vocabulary (i.e., a tensor of shape `(batch_size, sequence_length, vocab_size)`). Each distribution predicts the next token for the corresponding input token.
 
-When training the language model, we use these next-word predictions to calculate the cross-entropy loss between the actual next word and the predicted next word. When generating text from the language model during inference, we take the predicted next-word distribution from the final timestep (i.e., the last item in the sequence) to generate the next token in the sequence (e.g., by taking the token with the highest probability, sampling from the distribution, etc.), add the generated token to the input sequence, and repeat.
+During training, the model uses these predictions to compute the cross-entropy loss between the predicted and actual next tokens. During inference, the model uses the final timestep's output distribution (i.e., the last token in the sequence) to generate the next token—e.g., by taking the argmax or sampling—and appends it to the input sequence iteratively.
 
-In this part of the assignment, you will build **two** language models from scratch, one based on the **LSTM architecture** and the other on the **Transformer architecture**. We will start with a high-level overview of the two models and then progressively describe their individual components in detail.
+In this assignment, you will implement **two** language models from scratch: one based on an **LSTM** and the other on a **Transformer**. We begin with a high-level overview of both architectures, then detail their components step by step.
 
 ## 3.1 Model Overview
 
 ### 3.1.1 Transformer LM
 
-***Transformer.png***
+![Transformer](fig/Transformer.png)
 
-Given a sequence of token IDs, the Transformer language model uses an input embedding to convert token IDs to dense vectors, passes the embedded tokens through `num_layers` Transformer blocks, and then applies a learned linear projection (the “output embedding” or “LM head”) to produce the predicted next-token logits.
+A Transformer language model processes a sequence of token IDs by first converting them into dense vectors via an input embedding. These embedded tokens then pass through `num_layers` Transformer blocks, and finally through a linear output projection (the “LM head”) to produce next-token logits.
 
 #### 3.1.1.1 Token Embeddings
 
-In the very first step, the Transformer embeds the (batched) sequence of token IDs into a sequence of vectors containing information on the token identity (red blocks in Figure 1). More specifically, given a sequence of token IDs, the Transformer language model uses a token embedding layer to produce a sequence of vectors. Each embedding layer takes in a tensor of integers of shape `(batch_size, sequence_length)` and produces a sequence of vectors of shape `(batch_size, sequence_length, d_model)`.
+The model begins by embedding the batched token ID sequence (shape: `(batch_size, sequence_length)`) into a dense vector sequence (shape: `(batch_size, sequence_length, d_model)`). This step encodes token identity information.
 
 #### 3.1.1.2 Pre-norm Transformer Block
 
-After embedding, the activations are processed by several identically structured neural net layers. A standard decoder-only Transformer language model consists of `num_layers` identical layers (commonly called Transformer “blocks”). Each Transformer block takes in an input of shape `(batch_size, sequence_length, d_model)` and returns an output of shape `(batch_size, sequence_length, d_model)`. Each block aggregates information across the sequence (via self-attention) and non-linearly transforms it (via the feed-forward layers).
+The embedded sequence is processed by `num_layers` identical Transformer blocks. Each block (input/output shape: `(batch_size, sequence_length, d_model)`) integrates contextual information via self-attention and applies a non-linear transformation through feed-forward layers.
 
 #### 3.1.1.3 Output Normalization and Embedding
 
-After `num_layers` Transformer blocks, we will take the final activations and turn them into a distribution over the vocabulary. We will implement the “pre-norm” Transformer block, which additionally requires the use of layer normalization (detailed later) after the final Transformer block to ensure its outputs are properly scaled. After this normalization, we will use a standard learned linear transformation to convert the output of the Transformer blocks into predicted next-token logits.
+After the final Transformer block, a layer normalization is applied to stabilize activations—consistent with the pre-norm architecture. The normalized output is then projected via a learned linear layer to produce logits over the vocabulary.
 
 ### 3.1.2 LSTM LM
 
-***LSTM3-chain.png***
+![LSTM](fig/LSTM.png)
 
-In contrast to the Transformer LM, the LSTM LM replaces the stacked Transformer blocks with stacked LSTM cells, while keeping the rest of the architecture (token embeddings, output projection) the same. Each LSTM cell takes as input the hidden state and cell state from the previous time step. Concretely, given an input tensor of shape `(batch_size, d_model)`, the LSTM cell outputs a new hidden state of shape `(batch_size, d_model)` and updates its cell state of the same shape. When stacked across `num_layers`, the hidden states are sequentially passed upward through the layers and across the sequence.
+In contrast to the Transformer, the LSTM-based language model replaces the Transformer blocks with stacked LSTM layers, while retaining the same token embedding and output projection components. Each LSTM cell receives the hidden state and cell state from the previous timestep. Specifically, for an input tensor of shape `(batch_size, d_model)`, the LSTM cell produces an updated hidden state and cell state, both of shape `(batch_size, d_model)`. When multiple layers are stacked (`num_layers`), hidden states propagate upward through the layers and sequentially across the time steps.
 
 ## 3.2 Basic Building Blocks: Linear and Embedding Modules
 
 Training neural networks effectively often requires careful initialization of the model parameters—bad initializations can lead to undesirable behavior such as vanishing or exploding gradients. Pre-norm transformers are unusually robust to initializations, but they can still have a significant impact on training speed and convergence. In this assignment, use:
 
-- **Linear weights**:  $$ \mathcal{N}\left(\mu = 0, \sigma^2 = \frac{2}{d_{\text{in}} + d_{\text{out}}}\right)\text{ truncated at }[-3\sigma, 3\sigma]$$
-- **Embedding**:  $$\mathcal{N}\left(\mu = 0, \sigma^2 = 1\right)\text{ truncated at }[-3, 3]$$
+- **Linear weights**:  $$ \mathcal{N}\left(\mu = 0, \sigma^2 = \frac{2}{d_{\text{in}} + d_{\text{out}}}\right)\text{ truncated at }[-3\sigma, 3\sigma].$$
+- **Embedding**: $$\mathcal{N}\left(\mu = 0, \sigma^2 = 1\right)\text{ truncated at }[-3, 3].$$
 - **RMSNorm**: $$1$$
 
 You should use `torch.nn.init.trunc_normal_` to initialize the truncated normal weights.
@@ -475,6 +474,7 @@ y = \begin{cases}
     W x + b & \text{if bias is used}
 \end{cases}
 $$
+
 Note that the bias term is optional and is set to **"no bias"** by default, following the convention of most modern Transformer-based LLMs. However, in accordance with common practice, the LSTM implementation will include this term.
 
 >**Problem 3.2.1: Implementing the linear module (1 point)**
@@ -483,37 +483,37 @@ Note that the bias term is optional and is set to **"no bias"** by default, foll
 >
 >```python
 >class Linear(nn.Module):
->"""Applies a linear transformation to the input: y = xA^T + b."""
+>   """Applies a linear transformation to the input: y = xA^T + b."""
 >
->def __init__(
->   self,
->   in_features: int,
->   out_features: int,
->   bias: bool = False,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->) -> None:
->   """Initializes the linear module.
+>   def __init__(
+>        self,
+>        in_features: int,
+>        out_features: int,
+>        bias: bool = False,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>   ) -> None:
+>        """Initializes the linear module.
 >
->   Args:
->       in_features (int): Size of each input sample.
->       out_features (int): Size of each output sample.
->       bias (bool, optional): If True, includes a bias term. Defaults to False.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->   """
->   ...
+>        Args:
+>            in_features (int): Size of each input sample.
+>            out_features (int): Size of each output sample.
+>            bias (bool, optional): If True, includes a bias term. Defaults to False.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, x: Tensor) -> Tensor:
->   """Applies the linear transformation.
+>   def forward(self, x: torch.Tensor) -> torch.Tensor:
+>        """Applies the linear transformation.
 >
->   Args:
->       x (torch.Tensor): Input tensor of shape (..., in_features).
+>        Args:
+>            x (torch.Tensor): Input tensor of shape (..., in_features).
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., out_features).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., out_features).
+>        """
+>        ...
 >```
 >
 >Make sure to:
@@ -535,41 +535,41 @@ Note that the bias term is optional and is set to **"no bias"** by default, foll
 
 As discussed above, the first layer of the Transformer is an embedding layer that maps integer token IDs into a vector space of dimension `d_model`. We will implement a custom `Embedding` class that inherits from `torch.nn.Module` (so you should **not** use `nn.Embedding`).  The `forward` method should select the embedding vector for each token ID by indexing into an embedding matrix of shape `(vocab_size, d_model)` using a `torch.LongTensor` of token IDs with shape `(batch_size, sequence_length)`.
 
->**Problem 3.2.2: Implement the embedding module (1point)**
+>**Problem 3.2.2: Implement the embedding module (1 point)**
 >
 >Implement the `Embedding` class that inherits from `torch.nn.Module` and performs an embedding lookup. Your implementation should follow the interface of PyTorch’s built-in `nn.Embedding` module. We recommend the following interface:
 >
 >```python
 >class Embedding(nn.Module):
->"""A lookup table that maps indices to embedding vectors."""
+>   """A lookup table that maps indices to embedding vectors."""
 >
->def __init__(
->   self,
->   num_embeddings: int,
->   embedding_dim: int,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->) -> None:
->   """Initializes the embedding module.
+>   def __init__(
+>        self,
+>        num_embeddings: int,
+>        embedding_dim: int,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>   ) -> None:
+>        """Initializes the embedding module.
 >
->   Args:
->       num_embeddings (int): Size of the vocabulary.
->       embedding_dim (int): Dimension of the embedding vectors.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->   """
->   ...
+>        Args:
+>            num_embeddings (int): Size of the vocabulary.
+>            embedding_dim (int): Dimension of the embedding vectors.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, token_ids: Tensor) -> Tensor:
->   """Looks up embedding vectors for token IDs.
+>   def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
+>        """Looks up embedding vectors for token IDs.
 >
->   Args:
->       token_ids (torch.Tensor): Input tensor of shape (...).
+>        Args:
+>            token_ids (torch.Tensor): Input tensor of shape (...).
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., embedding_dim).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., embedding_dim).
+>        """
+>        ...
 >```
 >
 >Make sure to:
@@ -590,22 +590,25 @@ As discussed above, the first layer of the Transformer is an embedding layer tha
 
 ## 3.3 Pre-Norm Transformer Block 
 
-In the original Transformer paper, the model uses a residual connection around each of the two sub-layers, followed by layer normalization. This architecture is commonly known as the “post-norm” Transformer, since layer normalization is applied to the sublayer output. However, a variety of work has found that moving layer normalization from the output of each sub-layer to the input of each sub-layer (with an additional layer normalization after the final Transformer block) improves Transformer training stability — see Figure at the beginning of section 3 for a visual representation of this “pre-norm” Transformer block. The output of each Transformer block sub-layer is then added to the sub-layer input via the residual connection. An intuition for pre-norm is that there is a clean “residual stream” without any normalization going from the input embeddings to the final output of the Transformer, which is purported to improve gradient flow. This pre-norm Transformer is now the standard used in language models today (e.g., GPT-3, LLaMA, PaLM, etc.), so we will implement this variant. We will walk through each of the components of a pre-norm Transformer block, implementing them in sequence.
+The original Transformer paper employed residual connections around each sub-layer, followed by layer normalization—a design known as the “post-norm” Transformer. Subsequent research, however, has shown that moving layer normalization to the input of each sub-layer (along with a final normalization after the last block) enhances training stability. This “pre-norm” variant is illustrated in the Figure at the start of Section 3. In this architecture, the output of each sub-layer is added to its input via a residual connection. Pre-norm maintains a clearer “residual stream” from the input embeddings to the final output, which is thought to improve gradient flow. Due to these benefits, pre-norm has become the standard in modern language models (e.g., GPT-3, LLaMA, PaLM). In this assignment, you will implement this pre-norm variant. We now detail each component of the pre-norm Transformer block.
 
 ### 3.3.1 Root Mean Square Layer Normalization
 
-The original Transformer implementation of [Vaswani et al., 2017] uses layer normalization [Ba et al., 2016] to normalize activations. Following [Touvron et al., 2023], we will use root mean square layer normalization (RMSNorm; [Zhang and Sennrich, 2019, equation 4]) for layer normalization.  
+The original Transformer implementation of [[Attention Is All You Need]](https://arxiv.org/abs/1706.03762) uses layer normalization [[Layer Normalization]](https://arxiv.org/abs/1607.06450) to normalize activations. Following [[ LLaMA: Open and Efficient Foundation Language Models]](https://arxiv.org/abs/2302.13971), we will use root mean square layer normalization [[Root Mean Square Layer Normalization]](https://arxiv.org/abs/1910.07467) for layer normalization.  
 
 Given a vector $ a \in \mathbb{R}^{d_{\text{model}}} $ of activations, RMSNorm will rescale each activation $ a_i $ as follows:
 
 $$
-\text{RMSNorm}(a_i) = \frac{a_i}{\text{RMS}(a)} g_i
+\text{RMSNorm}(a_i) = \frac{a_i}{\text{RMS}(a)} g_i,
 $$
+
 where
+
 $$
 \text{RMS}(a) = \sqrt{\frac{1}{d_{\text{model}}} \sum_{i=1}^{d_{\text{model}}} a_i^2 + \varepsilon}.
 $$
-Here, $$ g_i $$ is a learnable *gain* parameter (there are `d_model` such parameters total), and $$\varepsilon $$ is a hyperparameter that is often fixed at $$ 1 \times 10^{-5} $$.
+
+Here, $ g_i $ is a learnable *gain* parameter (there are `d_model` such parameters total), and $ \varepsilon $ is a hyperparameter that is often fixed at $ 1 \times 10^{-5} $.
 
 You should upcast your input to `torch.float32` to prevent overflow when you square the input. Overall, your `forward` method should look like:
 
@@ -627,35 +630,35 @@ return result.to(in_dtype)
 >
 >```python
 >class RMSNorm(nn.Module):
->"""Applies Root Mean Square Layer Normalization (RMSNorm)."""
+>   """Applies Root Mean Square Layer Normalization (RMSNorm)."""  
 >
->def __init__(
->   self,
->   d_model: int,
->   eps: float = 1e-5,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->) -> None:
->   """Initializes the RMSNorm module.
+>   def __init__(
+>        self,
+>        d_model: int,
+>        eps: float = 1e-5,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>   ) -> None:
+>        """Initializes the RMSNorm module.
 >
->   Args:
->       d_model (int): Hidden dimension of the model.
->       eps (float, optional): Epsilon value for numerical stability. Defaults to 1e-5.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->   """
->   ...
+>        Args:
+>            d_model (int): Hidden dimension of the model.
+>            eps (float, optional): Epsilon value for numerical stability. Defaults to 1e-5.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, x: Tensor) -> Tensor:
->   """Applies RMSNorm to the input.
+>   def forward(self, x: torch.Tensor) -> torch.Tensor:
+>        """Applies RMSNorm to the input.
 >
->   Args:
->       x (torch.Tensor): Input tensor of shape (..., d_model).
+>        Args:
+>            x (torch.Tensor): Input tensor of shape (..., d_model).
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., d_model).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., d_model).
+>        """
+>        ...
 >```
 >
 >Note: Remember to upcast your input to `torch.float32` before performing the normalization (and later downcast to the original dtype), as described above.
@@ -668,22 +671,24 @@ return result.to(in_dtype)
 
 ### 3.3.2  Position-Wise Feed-Forward Network
 
-In the original Transformer paper (section 3.3 of [Vaswani et al., 2017]), the Transformer feed-forward network consists of two linear transformations with a ReLU activation ($\text{ReLU}(x) = \max(0, x)$) between them. The dimensionality of the inner feed-forward layer is typically 4x the input dimensionality.  
+In the original Transformer paper, the Transformer feed-forward network consists of two linear transformations with a ReLU activation ($\text{ReLU}(x) = \max(0, x)$) between them. The dimensionality of the inner feed-forward layer is typically 4x the input dimensionality.  
 
-However, modern language models tend to incorporate two main changes compared to this original design: they use another activation function and employ a gating mechanism. Specifically, we will implement the “SwiGLU” activation function adopted in LLMs like Llama 3 [Grattafiori et al., 2024] and Qwen 2.5 [Yang et al., 2024], which combines the SiLU (often called Swish) activation with a gating mechanism called a Gated Linear Unit (GLU). We will also omit the bias terms sometimes used in linear layers, following most modern LLMs since PaLM [Chowdhery et al., 2022] and LLaMA [Touvron et al., 2023].  
+However, modern language models tend to incorporate two main changes compared to this original design: they use another activation function and employ a gating mechanism. Specifically, we will implement the “SwiGLU” activation function adopted in LLMs like Llama 3 and Qwen 2.5, which combines the SiLU (often called Swish) activation with a gating mechanism called a Gated Linear Unit (GLU).
 
-The SiLU or Swish activation function [Hendrycks and Gimpel, 2016, Elfwing et al., 2017] is defined as follows:
+The SiLU or Swish activation function is defined as follows:
 
 $$
 \text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}
 $$
-As can be seen in Figure 3, the SiLU activation function is similar to the ReLU activation function, but is smooth at zero.  
 
-Gated Linear Units (GLUs) were originally defined by [Dauphin et al., 2017] as the element-wise product of a linear transformation passed through a sigmoid function and another linear transformation:
+The SiLU activation function is similar to the ReLU activation function, but is smooth at zero.  
+
+Gated Linear Units (GLUs) were originally defined as the element-wise product of a linear transformation passed through a sigmoid function and another linear transformation:
 
 $$
 \text{GLU}(x, W_1, W_2) = \sigma(W_1 x) \odot W_2 x,
 $$
+
 where $\odot$ represents element-wise multiplication. Gated Linear Units are suggested to “reduce the vanishing gradient problem for deep architectures by providing a linear path for the gradients while retaining non-linear capabilities.”  
 
 Putting the SiLU/Swish and GLU together, we get the **SwiGLU**, which we will use for our feed-forward networks:
@@ -691,43 +696,44 @@ Putting the SiLU/Swish and GLU together, we get the **SwiGLU**, which we will us
 $$
 \text{FFN}(x) = \text{SwiGLU}(x, W_1, W_2, W_3) = W_2 \big(\text{SiLU}(W_1 x) \odot W_3 x \big),
 $$
+
 where $x \in \mathbb{R}^{d_{\text{model}}}$, $W_1, W_3 \in \mathbb{R}^{d_{\text{ff}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{ff}}}$, and canonically, $d_{\text{ff}} = \tfrac{8}{3} d_{\text{model}}$.
 
->**Problem 3.3.2:  Implement the position-wise feed-forward network (1 point)**
+>**Problem 3.3.2:  Implement the position-wise feed-forward network (2 points)**
 >
->Implement the `SwiGLU` feed-forward network as a `torch.nn.Moudle`.
+>Implement the `SwiGLU` feed-forward network as a `torch.nn.Module`.
 >
 >```python
 >class SwiGLU(nn.Module):
->"""Applies the SwiGLU feedforward transformation."""
+>   """Applies the SwiGLU feedforward transformation."""
 >
->def __init__(
->   self,
->   d_model: int,
->   d_ff: int,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->) -> None:
->   """Initializes the SwiGLU module.
+>   def __init__(
+>        self,
+>        d_model: int,
+>        d_ff: int,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>   ) -> None:
+>        """Initializes the SwiGLU module.
 >
->   Args:
->       d_model (int): Hidden dimension of the model.
->       d_ff (int): Inner dimension of the feedforward layer.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->   """
->   ...
+>        Args:
+>            d_model (int): Hidden dimension of the model.
+>            d_ff (int): Inner dimension of the feedforward layer.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, x: Tensor) -> Tensor:
->   """Applies the SwiGLU transformation.
+>   def forward(self, x: torch.Tensor) -> torch.Tensor:
+>        """Applies the SwiGLU transformation.
 >
->   Args:
->       x (torch.Tensor): Input tensor of shape (..., d_model).
+>        Args:
+>            x (torch.Tensor): Input tensor of shape (..., d_model).
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., d_model).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., d_model).
+>        """
+>        ...
 >```
 >
 >Note: in this particular case, you should feel free to use `torch.sigmoid` in your implementation for numerical stability.  
@@ -740,19 +746,21 @@ where $x \in \mathbb{R}^{d_{\text{model}}}$, $W_1, W_3 \in \mathbb{R}^{d_{\text{
 
 ### 3.3.3 Relative Positional Embedding
 
-To inject positional information into the model, we will implement Rotary Position Embeddings [Su et al., 2021], often called RoPE. For a given query token $ q^{(i)} = W_q x^{(i)} \in \mathbb{R}^d $ at token position $i$, we will apply a pairwise rotation matrix $R^i$, giving us  
+To inject positional information into the model, we will implement Rotary Position Embeddings, often called RoPE. For a given query token $ q^{(i)} = W_q x^{(i)} \in \mathbb{R}^d $ at token position $ i $, we will apply a pairwise rotation matrix $ R^i $, giving us  
 
 $$
 q'^{(i)} = R^i q^{(i)} = R^i W_q x^{(i)}.
 $$
-Here, $R^i$ will rotate pairs of embedding elements $q^{(i)}_{2k-1:2k}$ as 2d vectors by the angle  
+
+Here, $ R^i $ will rotate pairs of embedding elements $ q^{(i)}_{2k-1:2k} $ as 2d vectors by the angle  
 
 $$
 \theta_{i,k} = \frac{i}{\Theta^{(2k-2)/d}} \quad \text{for } k \in \{1, \dots, d/2\},
 $$
+
 and some constant $\Theta$.  
 
-Thus, we can consider $R^i$ to be a block-diagonal matrix of size  $d \times d$, with blocks $R^i_k$ for $k \in \{1, \dots, d/2\}$, with  
+Thus, we can consider $ R^i $ to be a block-diagonal matrix of size $ d \times d $, with blocks $ R^i_k $ for $ k \in \{1, \dots, d/2\} $, with  
 
 $$
 R^i_k =
@@ -761,6 +769,7 @@ R^i_k =
 \sin(\theta_{i,k}) & \cos(\theta_{i,k})
 \end{bmatrix}.
 $$
+
 Thus we get the full rotation matrix  
 
 $$
@@ -773,7 +782,8 @@ R^i_1 & 0 & 0 & \dots & 0 \\
 0 & 0 & 0 & \dots & R^i_{d/2}
 \end{bmatrix},
 $$
-where 0s represent $2 \times 2$ zero matrices.  
+
+where 0s represent $ 2 \times 2 $ zero matrices.  
 
 While one could construct the full $ d \times d $ matrix, a good solution should use the properties of this matrix to implement the transformation more efficiently. Since we only care about the relative rotation of tokens within a given sequence, we can reuse the values we compute for $\cos(\theta_{i,k})$ and $\sin(\theta_{i,k})$ across layers, and different batches.  
 
@@ -783,43 +793,43 @@ If you would like to optimize it, you may use a single RoPE module referenced by
 self.register_buffer(persistent=False)
 ```
 
->**Problem3.3.3: Implement RoPE (2points)**
+>**Problem3.3.3: Implement RoPE (2 points)**
 >
->Implement a class `RoPE` as a `torch.nn.Module` that applies RoPE to the input tensor. The following interface is recommended:
+>Implement `RoPE` as a `torch.nn.Module` that applies RoPE to the input tensor. The following interface is recommended:
 >
 >```python
 >class RoPE(nn.Module):
->"""Applies Rotary Position Embeddings (RoPE)."""
+>   """Applies Rotary Position Embeddings (RoPE)."""
 >
->def __init__(
->   self,
->   theta: float,
->   d_k: int,
->   max_seq_len: int,
->   device: Optional[torch.device] = None,
->) -> None:
->   """Initializes the RoPE module.
+>   def __init__(
+>        self,
+>        theta: float,
+>        d_k: int,
+>        max_seq_len: int,
+>        device: Optional[torch.device] = None,
+>   ) -> None:
+>        """Initializes the RoPE module.
 >
->   Args:
->       theta (float): Θ value for the rotary embedding.
->       d_k (int): Dimension of query and key vectors.
->       max_seq_len (int): Maximum sequence length supported.
->       device (torch.device, optional): Device to store buffers. Defaults to None.
->   """
->   ...
+>        Args:
+>            theta (float): Θ value for the rotary embedding.
+>            d_k (int): Dimension of query and key vectors.
+>            max_seq_len (int): Maximum sequence length supported.
+>            device (torch.device, optional): Device to store buffers. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, x: Tensor, token_positions: Tensor) -> Tensor:
->   """Applies rotary position embeddings.
+>   def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
+>        """Applies rotary position embeddings.
 >
->   Args:
->       x (torch.Tensor): Input tensor of shape (..., seq_len, d_k).
->       token_positions (torch.Tensor): Tensor of shape (..., seq_len)
->           specifying token positions.
+>        Args:
+>            x (torch.Tensor): Input tensor of shape (..., seq_len, d_k).
+>            token_positions (torch.Tensor): Tensor of shape (..., seq_len)
+>                specifying token positions.
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., seq_len, d_k).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., seq_len, d_k).
+>        """
+>        ...
 >```
 >
 >To test your implementation, complete `[adapters.run_rope]` and make sure it passes
@@ -830,17 +840,18 @@ self.register_buffer(persistent=False)
 
 ### 3.3.4  Scaled Dot-Product Attention
 
-We will now implement scaled dot-product attention as described in [Vaswani et al., 2017] (section 3.2.1). 
+We will now implement scaled dot-product attention as described in the original Transformer paper. 
 
 As a preliminary step, the definition of the Attention operation will make use of softmax, an operation that takes an unnormalized vector of scores and turns it into a normalized distribution:
 $$
 \text{softmax}(v)_i = \frac{\exp(v_i)}{\sum_{j=1}^n \exp(v_j)}.
 $$
-Note that $\exp(v_i)$ can become inf for large values (then, $ \text{inf}/\text{inf} = \text{NaN} $). We can avoid this by noticing that the softmax operation is invariant to adding any constant $ c $to all inputs. We can leverage this property for numerical stability—typically, we will subtract the largest entry of $o_i$ from all elements of $o_i$, making the new largest entry 0.  You will now implement softmax, using this trick for numerical stability.
 
->**Problem 3.3.4.1: Implement softmax (1point)**
+Note that $\exp(v_i)$ can become inf for large values (then, $ \text{inf}/\text{inf} = \text{NaN} $). We can avoid this by noticing that the softmax operation is invariant to adding any constant $ c $ to all inputs. We can leverage this property for numerical stability—typically, we will subtract the largest entry of $ o_i $ from all elements of $ o_i $, making the new largest entry 0.  You will now implement softmax, using this trick for numerical stability.
+
+>**Problem 3.3.4.1: Implement softmax (2 points)**
 >
->Write a function to apply the softmax operation on a tensor. Your function should take two parameters: a tensor and a *dimension i*, and apply softmax to the *i*-th dimension of the input tensor.  
+>Write a `softmax` function to apply the softmax operation on a tensor. Your function should take two parameters: a tensor and dimension *i*, and apply softmax to the *i*-th dimension of the input tensor.  
 >
 >The output tensor should have the same shape as the input tensor, but its *i*-th dimension will now have a normalized probability distribution.  
 >
@@ -850,18 +861,18 @@ Note that $\exp(v_i)$ can become inf for large values (then, $ \text{inf}/\text{
 >
 >```python
 >def softmax(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
->"""Softmax activation function.
+>   """Softmax activation function.
 >
->Applies the softmax function to the input tensor along the specified dimension.
+>   Applies the softmax function to the input tensor along the specified dimension.
 >
->Args:
->  x: Input tensor.
->  dim: Dimension along which softmax will be computed. Defaults to -1.
+>   Args:
+>    x: Input tensor.
+>    dim: Dimension along which softmax will be computed. Defaults to -1.
 >
->Returns:
->  Tensor with softmax applied along the specified dimension.
->"""
->...
+>   Returns:
+>    Tensor with softmax applied along the specified dimension.
+>   """
+>   ...
 >```
 >
 >---
@@ -877,15 +888,16 @@ We can now define the Attention operation mathematically as follows:
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V
 $$
-where $Q \in \mathbb{R}^{n \times d_k}, \; K \in \mathbb{R}^{m \times d_k}, \; V \in \mathbb{R}^{m \times d_v} $.  Here, $ Q, K, V $ are all inputs to this operation — note that these are not the learnable parameters.  
 
-**Masking.** It is sometimes convenient to *mask* the output of an attention operation. A mask should have the shape $M \in \{\text{True}, \text{False}\}^{n \times m} $, and each row $i$ of this boolean matrix indicates which keys the query $i$ should attend to.  Canonically (and slightly confusingly), a value of **True** at position $(i, j)$ indicates that the query $ i $ *does* attend to the key $ j $ and a value of **False** indicates that the query *does not* attend to the key.  In other words, “information flows” at $(i, j)$ pairs with value **True**.  For example, consider a $ 1 \times 3 $ mask matrix with entries `[[True, True, False]]`.  The single query vector attends only to the first two keys.  
+where $ Q \in \mathbb{R}^{n \times d_k}, \; K \in \mathbb{R}^{m \times d_k}, \; V \in \mathbb{R}^{m \times d_v} $.  Here, $ Q, K, V $ are all inputs to this operation — note that these are not the learnable parameters.  
+
+**Masking.** It is sometimes convenient to *mask* the output of an attention operation. A mask should have the shape $ M \in \{\text{True}, \text{False}\}^{n \times m} $, and each row $ i $ of this boolean matrix indicates which keys the query $ i $ should attend to.  Canonically (and slightly confusingly), a value of **True** at position $(i, j)$ indicates that the query $ i $ *does* attend to the key $ j $ and a value of **False** indicates that the query *does not* attend to the key.  In other words, “information flows” at $(i, j)$ pairs with value **True**.  For example, consider a $ 1 \times 3 $ mask matrix with entries `[[True, True, False]]`.  The single query vector attends only to the first two keys.  
 
 Computationally, it will be much more efficient to use masking than to compute attention on subsequences, and we can do this by taking the pre-softmax values $\frac{Q K^\top}{\sqrt{d_k}}$ and adding a $-\infty$ in any entry of the mask matrix that is **False**.
 
 >**Problem 3.3.4.2: Implement scaled dot-product attention (5 points)**
 >
->Implement the scaled dot-product attention function.  
+>Implement the `scaled_dot_product_attention` function.  
 >
 >Your implementation should handle keys and queries of shape `(batch_size, ..., seq_len, d_k)` and values of shape `(batch_size, ..., seq_len, d_v)`, where `...` represents any number of other batch-like dimensions (if provided).  The implementation should return an output with the shape `(batch_size, ..., d_v)`.
 >
@@ -898,23 +910,23 @@ Computationally, it will be much more efficient to use masking than to compute a
 >
 >```python
 >def scaled_dot_product_attention(
->  query: torch.Tensor,
->  key: torch.Tensor,
->  value: torch.Tensor,
->  mask: Optional[torch.Tensor] = None
+>    query: torch.Tensor,
+>    key: torch.Tensor,
+>    value: torch.Tensor,
+>    mask: Optional[torch.Tensor] = None
 >) -> torch.Tensor:
->   """Scaled dot-product attention function.
+>    """Scaled dot-product attention function.
 >
->   Args:
->      query: Tensor of shape (batch_size, ..., seq_len_q, d_k)
->      key: Tensor of shape (batch_size, ..., seq_len_k, d_k)  
->      value: Tensor of shape (batch_size, ..., seq_len_v, d_v)
->      mask: Boolean tensor of shape (seq_len_q, seq_len_k) or broadcastable shape
+>    Args:
+>        query: Tensor of shape (batch_size, ..., seq_len_q, d_k)
+>        key: Tensor of shape (batch_size, ..., seq_len_k, d_k)  
+>        value: Tensor of shape (batch_size, ..., seq_len_v, d_v)
+>        mask: Boolean tensor of shape (seq_len_q, seq_len_k) or broadcastable shape
 >
->   Returns:
->      Tensor of shape (batch_size, ..., seq_len_q, d_v)
->   """
->	...
+>    Returns:
+>        Tensor of shape (batch_size, ..., seq_len_q, d_v)
+>    """
+>   ...
 >```
 >
 >To test your implementation, complete `[adapters.run_softmax]` and make sure it passes  
@@ -927,7 +939,7 @@ Computationally, it will be much more efficient to use masking than to compute a
 
 ### 3.3.5  Causal Multi-Head Self-Attention
 
-We will implement multi-head self-attention as described in section 3.2.2 of [Vaswani et al., 2017]. Recall that, mathematically, the operation of applying multi-head attention is defined as follows:
+We will implement multi-head self-attention. Recall that, mathematically, the operation of applying multi-head attention is defined as follows:
 
 $$
 \text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)
@@ -944,6 +956,7 @@ With Attention being the scaled dot-product attention operation defined in §3.3
 $$
 \text{MultiHeadSelfAttention}(x) = W_O \, \text{MultiHead}(W_Q x, W_K x, W_V x)
 $$
+
 Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{model}} $, $ W_K \in \mathbb{R}^{h d_k \times d_\text{model}} $, $ W_V \in \mathbb{R}^{h d_v \times d_\text{model}} $ , and $ W_O \in \mathbb{R}^{d_\text{model} \times h d_v} $. Since the $ Q $s, $ K $, and $ V $s are sliced in the multi-head attention operation, we can think of $ W_Q, W_K, W_V $ as being separated for each head along the output dimension. When you have this working, you should be computing the key, value, and query projections in a total of three matrix multiplies to be compatible with test code.
 
 **Causal masking.** Your implementation should prevent the model from attending to future tokens in the sequence.  In other words, if the model is given a token sequence $ t_1, \ldots, t_n $, and we want to calculate the next-word predictions for the prefix $ t_1, \ldots, t_i $ (where $ i < n $), the model should **not** be able to access (attend to) the token representations at positions $ t_{i+1}, \ldots, t_n $, since it will not have access to these tokens when generating text during inference (and these future tokens leak information about the identity of the true next word, trivializing the language modeling pre-training objective).  For an input token sequence $ t_1, \ldots, t_n $, we can naively prevent access to future tokens by running multi-head self-attention $ n $ times (for the $ n $ unique prefixes in the sequence). Instead, we’ll use **causal attention masking**, which allows token $ i $ to attend to all positions $ j \leq i $ in the sequence. You can use `torch.triu / torch.tril` or a broadcasted index comparison to construct this mask, and you should take advantage of the fact that your scaled dot-product attention implementation from §3.5.4 already supports attention masking.
@@ -952,16 +965,11 @@ Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{mo
 
 >**Problem 3.3.5: Implement causal multi-head self-attention (5 points)**
 >
->Implement class `CasualMultiHeadSelfAttention` as a `torch.nn.Module`. Your implementation should following *Vaswani et al. (2017)*, set  $d_k = d_v = \frac{d_{\text{model}}}{h}$.
+>Implement `CasualMultiHeadSelfAttention` as a `torch.nn.Module`. Your implementation should set  $d_k = d_v = \frac{d_{\text{model}}}{h}$.
 >
 >The following interface is recommended:
 >
 >```python
->import torch
->from torch import Tensor
->from typing import Optional
->
->
 >class CasualMultiheadSelfAttention(nn.Module):
 >"""Causal multi-head self-attention with optional RoPE."""
 >
@@ -981,7 +989,7 @@ Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{mo
 >       d_model (int): Hidden dimension of the model.
 >       num_heads (int): Number of attention heads.
 >       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>   dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
 >       use_rope (bool, optional): Whether to apply RoPE. Defaults to False.
 >       theta (float, optional): Θ parameter for RoPE when enabled. Defaults to None.
 >       max_seq_len (int, optional): Maximum sequence length for RoPE buffers.
@@ -989,11 +997,15 @@ Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{mo
 >   """
 >   ...
 >
->def forward(self, x: Tensor, token_positions: Optional[Tensor] = None) -> Tensor:
+>def forward(
+>   self,
+>   x: torch.Tensor,
+>   token_positions: Optional[torch.Tensor] = None
+>   ) -> torch.Tensor:
 >   """Applies causal multi-head self-attention.
 >
 >   Args:
->       x (torch.Tensor): Input tensor of shape (..., seq_len, d_model).
+>   x (torch.Tensor): Input tensor of shape (..., seq_len, d_model).
 >       token_positions (torch.Tensor, optional): Tensor of shape (..., seq_len)
 >           with token positions; required if `use_rope` is True. Defaults to None.
 >
@@ -1011,7 +1023,7 @@ Here, the learnable parameters are $ W_Q \in \mathbb{R}^{h d_k \times d_\text{mo
 
 ## 3.4 The Full Transformer LM
 
-Let’s begin by assembling the Transformer block. A Transformer block contains two *sublayers*: one for the multi-head self-attention, and another for the feed-forward network. In each sublayer, we first perform RMSNorm, then the main operation (MHA / FF), and finally add in the residual connection.
+Let’s begin by assembling the Transformer block. A Transformer block contains two sublayers: one for the multi-head self-attention, and another for the feed-forward network. In each sublayer, we first perform RMSNorm, then the main operation (MHA / FF), and finally add in the residual connection.
 
 To be concrete, the first half (the first *sublayer*) of the Transformer block should be implementing the following set of updates to produce an output $ y $ from an input $ x $:
 
@@ -1019,51 +1031,51 @@ $$
 y = x + \text{MultiHeadSelfAttention}(\text{RMSNorm}(x))
 $$
 
->**Problem 3.4.1: Implement the Transformer block (3 points)**
+>**Problem 3.4.1: Implement the Transformer block (4 points)**
 >
->Implement the pre-norm `TransformerBlock` as a `torch.nn.Module`,  as described in §3.5 and illustrated in Figure 2. 
+>Implement the pre-norm `TransformerBlock` as a `torch.nn.Module`
 >
 >The following interface is recommended:
 >
 >```python
 >class TransformerBlock(nn.Module):
->"""A single Transformer block with self-attention and feedforward network."""
+>   """A single Transformer block with self-attention and feedforward network."""
 >
->def __init__(
->   self,
->   d_model: int,
->   num_heads: int,
->   d_ff: int,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->   use_rope: bool = False,
->   theta: Optional[float] = None,
->   max_seq_len: Optional[int] = None,
->) -> None:
->   """Initializes the Transformer block.
+>   def __init__(
+>        self,
+>        d_model: int,
+>        num_heads: int,
+>        d_ff: int,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>        use_rope: bool = False,
+>        theta: Optional[float] = None,
+>        max_seq_len: Optional[int] = None,
+>   ) -> None:
+>        """Initializes the Transformer block.
 >
->   Args:
->       d_model (int): Hidden dimension of the model.
->       num_heads (int): Number of attention heads.
->       d_ff (int): Hidden dimension of the feedforward layer.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->       use_rope (bool, optional): Whether to apply RoPE in self-attention. Defaults to False.
->       theta (float, optional): Θ parameter for RoPE. Defaults to None.
->       max_seq_len (int, optional): Maximum sequence length for RoPE buffers. Defaults to None.
->   """
->   ...
+>        Args:
+>            d_model (int): Hidden dimension of the model.
+>            num_heads (int): Number of attention heads.
+>            d_ff (int): Hidden dimension of the feedforward layer.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>            use_rope (bool, optional): Whether to apply RoPE in self-attention. Defaults to False.
+>            theta (float, optional): Θ parameter for RoPE. Defaults to None.
+>            max_seq_len (int, optional): Maximum sequence length for RoPE buffers. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, x: Tensor) -> Tensor:
->   """Applies the Transformer block.
+>   def forward(self, x: torch.Tensor) -> torch.Tensor:
+>        """Applies the Transformer block.
 >
->   Args:
->       x (torch.Tensor): Input tensor of shape (..., seq_len, d_model).
+>        Args:
+>            x (torch.Tensor): Input tensor of shape (..., seq_len, d_model).
 >
->   Returns:
->       torch.Tensor: Output tensor of shape (..., seq_len, d_model).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Output tensor of shape (..., seq_len, d_model).
+>        """
+>        ...
 >```
 >
 >To test your implementation, implement the adapter `[adapters.run_transformer_block]`. Then, run
@@ -1072,57 +1084,57 @@ $$
 >uv run pytest -k test_transformer_block
 >```
 
-Now we put the blocks together, following the high level diagram in Figure 1. Follow our description of the embedding in Section 3.1.1, feed this into num_layers Transformer blocks, and then pass that into the three output layers to obtain a distribution over the vocabulary.
+Now we put the blocks together. Following our description of the embedding in Section 3.1.1, feed this into `num_layers` Transformer blocks, and then pass that into the three output layers (final RMSNorm, linear projection, softmax function) to obtain a distribution over the vocabulary.
 
->**Problem 3.4.2: Implementing the Transformer LM (3points)**
+>**Problem 3.4.2: Implementing the Transformer LM (3 points)**
 >
->Time to put it all together! Implement the `Transformer_LM` as described in §3.1 and illustrated in Figure 1.
+>Time to put it all together! Implement the `TransformerLM` as described in 3.1.1 and illustrated in Figure 1.
 >
 >The following interface is recommended:
 >
 >```python
 >class TransformerLM(nn.Module):
->"""A Transformer-based language model."""
+>   """A Transformer-based language model."""
 >
->def __init__(
->   self,
->   vocab_size: int,
->   context_length: int,
->   num_layers: int,
->   d_model: int,
->   num_heads: int,
->   d_ff: int,
->   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
->   use_rope: bool = False,
->   theta: Optional[float] = None,
->) -> None:
->   """Initializes the Transformer language model.
+>   def __init__(
+>        self,
+>        vocab_size: int,
+>        context_length: int,
+>        num_layers: int,
+>        d_model: int,
+>        num_heads: int,
+>        d_ff: int,
+>        device: Optional[torch.device] = None,
+>        dtype: Optional[torch.dtype] = None,
+>        use_rope: bool = False,
+>        theta: Optional[float] = None,
+>   ) -> None:
+>        """Initializes the Transformer language model.
 >
->   Args:
->       vocab_size (int): Vocabulary size for token embeddings.
->       context_length (int): Maximum sequence length for positional encodings.
->       num_layers (int): Number of Transformer blocks.
->       d_model (int): Hidden dimension of the model.
->       num_heads (int): Number of attention heads.
->       d_ff (int): Hidden dimension of the feedforward layer.
->       device (torch.device, optional): Device to store parameters. Defaults to None.
->       dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
->       use_rope (bool, optional): Whether to apply RoPE. Defaults to False.
->       theta (float, optional): Θ parameter for RoPE. Defaults to None.
->   """
->   ...
+>        Args:
+>            vocab_size (int): Vocabulary size for token embeddings.
+>            context_length (int): Maximum sequence length for positional encodings.
+>            num_layers (int): Number of Transformer blocks.
+>            d_model (int): Hidden dimension of the model.
+>            num_heads (int): Number of attention heads.
+>            d_ff (int): Hidden dimension of the feedforward layer.
+>            device (torch.device, optional): Device to store parameters. Defaults to None.
+>            dtype (torch.dtype, optional): Data type of parameters. Defaults to None.
+>            use_rope (bool, optional): Whether to apply RoPE. Defaults to False.
+>            theta (float, optional): Θ parameter for RoPE. Defaults to None.
+>        """
+>        ...
 >
->def forward(self, input_ids: Tensor) -> Tensor:
->   """Applies the Transformer language model.
+>   def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+>        """Applies the Transformer language model.
 >
->   Args:
->       input_ids (torch.Tensor): Token IDs of shape (..., seq_len).
+>        Args:
+>            input_ids (torch.Tensor): Token IDs of shape (..., seq_len).
 >
->   Returns:
->       torch.Tensor: Logits of shape (..., seq_len, vocab_size).
->   """
->   ...
+>        Returns:
+>            torch.Tensor: Logits of shape (..., seq_len, vocab_size).
+>        """
+>        ...
 >```
 >
 >To test your implementation against our provided tests, you will first need to implement the test adapter at `[adapters.run_transformer_lm]`. Then, run  
@@ -1163,9 +1175,9 @@ $$
 
 where $\sigma$ denotes the logistic sigmoid function, $\tanh$ is the hyperbolic tangent function, $\odot$ denotes elementwise multiplication, $W_*$ and $U_*$ are weight matrices applied to input $x_t$ and hidden state $h_{t-1}$ respectively, and $b_*$ are bias vectors. The forget gate $f_t$ controls how much of the previous cell state is preserved, the input gate $i_t$ regulates how much new candidate information $g_t$ is incorporated, the output gate $o_t$ determines how much of the updated cell state contributes to the hidden state $h_t$, and $c_t$ acts as the memory cell maintaining long-term information across time steps.
 
->**Problem 3.5: Implementing the LSTMCell (3points)**
+>**Problem 3.5: Implementing the LSTMCell (3 points)**
 >
->Implement a `LSTMCell` as a `torch.nn.Module`. Note that remember to **use bias** for the `Linear` module in the class, to accord with the formula.
+>Implement  `LSTMCell` as a `torch.nn.Module`. Note that remember to **use bias** for the `Linear` module in the class, to accord with the formula.
 >
 >The following interface is recommended:
 >
@@ -1189,8 +1201,10 @@ where $\sigma$ denotes the logistic sigmoid function, $\tanh$ is the hyperbolic 
 >   ...
 >
 >def forward(
->   self, x: Tensor, state: Optional[Tuple[Tensor, Tensor]] = None
->) -> Tuple[Tensor, Tensor]:
+>   self,
+>   x: torch.Tensor,
+>   state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+>) -> Tuple[torch.Tensor, torch.Tensor]:
 >   """Applies the LSTM cell.
 >
 >   Args:
@@ -1205,18 +1219,20 @@ where $\sigma$ denotes the logistic sigmoid function, $\tanh$ is the hyperbolic 
 >   """
 >   ...
 >```
+>
+>No pytest cases are provided for this problem, please make sure your implementation is correct.
 
 ## 3.6 LSTM LM
 
-In contrast to the Transformer block, managing the decoding pipeline for a single LSTM and stacking multiple LSTM layers are both non-trivial tasks. Therefore, we advise implementing an intermediate `LSTM` module to encapsulate the computational logic for a stack of LSTM cells.
+In contrast to the Transformer block, managing the decoding pipeline for a single LSTM and stacking multiple LSTM layers are both non-trivial tasks. Therefore, we advise implementing an intermediate LSTM module to encapsulate the computational logic for a stack of LSTM cells.
 
 In a stacked LSTM, data flows along two axes: the **time axis** (across timesteps) and the **layer axis** (across stacked layers). A common and effective scheduling strategy is to process all layers for a single timestep before proceeding to the next. This means at `t=0`, the input passes through `Layer 1` → `Layer 2` → … → `Layer N`; the computation then advances to `t=1`. This layer-first approach is straightforward to implement and sufficient for our lab. While other strategies—such as processing an entire sequence layer-by-layer—are theoretically possible, they are rarely used in practice. We will therefore use the simple timestep-by-timestep, layer-by-layer progression and will not require more advanced scheduling.
 
 If you are familiar with RNN implementations in PyTorch, you may know that iterating through timesteps can be complex. This is especially true when using mask or length tensors to handle variable-length sequences in a batched training setting. Functions like `torch.nn.utils.rnn.pack_padded_sequence()` and `torch.nn.utils.rnn.pad_packed_sequence()` are designed to convert padded batches into a "packed" format and back again. PyTorch uses specialized CUDA kernels to process packed data, which improves efficiency by skipping computations on padded positions. However, **for this assignment, we will use a simplified data loader with uniform sequence lengths in the next part to avoid this complexity**, so you do not need to concern yourself with these functions.
 
->**Problem 3.6: Implementing the LSTM (3points)**
+>**Problem 3.6: Implementing the LSTM (3 points)**
 >
->Implement a `LSTM` as a `torch.nn.Module` to manage the forward logics of multi-layer LSTM.
+>Implement `LSTM` as a `torch.nn.Module` to manage the forward logics of multi-layer LSTM.
 >
 >The following interface is recommended:
 >
@@ -1242,8 +1258,10 @@ If you are familiar with RNN implementations in PyTorch, you may know that itera
 >   ...
 >
 >def forward(
->   self, x: Tensor, state: Optional[Tuple[Tensor, Tensor]] = None
->) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+>   self,
+>   x: torch.Tensor,
+>   state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+>) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
 >   """Applies the multi-layer LSTM.
 >
 >   Args:
@@ -1256,16 +1274,18 @@ If you are familiar with RNN implementations in PyTorch, you may know that itera
 >       tuple:
 >               - torch.Tensor: Output tensor of shape (batch_size, seq_len, d_model).
 >               - tuple[torch.Tensor, torch.Tensor]: Next (hidden_states, cell_states),
->                 each of shape (num_layers, batch_size, d_model).
+>                   each of shape (num_layers, batch_size, d_model).
 >       """
 >       ...
 >```
-
-Smoothly, you can put the `LSTM` together with other modules you have already defined and used in Transformer LM to produce your `LSTM_LM`.
-
->**Problem 3.7: Implementing the LSTM_LM (3points)**
 >
->Implement a `LSTM_LM` as a `torch.nn.Module` to serve as an LSTM-based LM.
+>No pytest cases are provided for this problem, please make sure your implementation is correct.
+
+Smoothly, you can put the `LSTM` together with other modules you have already defined and used in Transformer LM part to produce your LSTM LM.
+
+>**Problem 3.7: Implementing LSTM LM (4 points)**
+>
+>Implement `LSTMLM` as a `torch.nn.Module` to serve as an LSTM-based LM.
 >
 >The following interface is recommended:
 >
@@ -1279,7 +1299,7 @@ Smoothly, you can put the `LSTM` together with other modules you have already de
 >   d_model: int,
 >   num_layers: int,
 >   device: Optional[torch.device] = None,
->   dtype: Optional[torch.dtype] = None,
+>   dtype: Optional[torch.dtype] = None
 >) -> None:
 >   """Initializes the LSTM language model.
 >
@@ -1293,8 +1313,10 @@ Smoothly, you can put the `LSTM` together with other modules you have already de
 >   ...
 >
 >def forward(
->   self, input_ids: Tensor, state: Optional[Tuple[Tensor, Tensor]] = None
->) -> Tensor:
+>   self,
+>   input_ids: torch.Tensor,
+>   state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+>) -> torch.Tensor:
 >   """Applies the LSTM language model.
 >
 >   Args:
@@ -1308,6 +1330,8 @@ Smoothly, you can put the `LSTM` together with other modules you have already de
 >   """
 >   ...
 >```
+>
+> No pytest cases are provided for this problem, please make sure your implementation is correct.
 
 # 4 Training a Transformer LM
 
@@ -1339,7 +1363,7 @@ Implementing the cross entropy loss requires some care with numerical issues, ju
 
 
 
-> **Problem 4.1 (cross_entropy): Implement Cross entropy**
+> **Problem 4.1 (cross_entropy): Implement Cross entropy (2 points)**
 >
 > Write a function to compute the cross entropy loss, which takes in predicted logits $(o_i)$ and targets $(x_{i+1})$ and computes the cross entropy $\ell_i = -\log \text{softmax}(o_i)[x_{i+1}]$. Your function should handle the following:
 >
@@ -1558,7 +1582,7 @@ $$
 
 
 
-> **Problem 4.5  (learning_rate_schedule): Implement cosine learning rate schedule with warmup**
+> **Problem 4.5  (learning_rate_schedule): Implement cosine learning rate schedule with warmup (2 points)**
 >
 > Write a function that takes $t$, $\alpha_{\max}$, $\alpha_{\min}$, $T_w$ and $T_c$, and returns the learning rate $\alpha_t$ according to the scheduler defined above. Then implement `[adapters.get_lr_cosine_schedule]` and make sure it passes 
 >
@@ -1576,7 +1600,7 @@ Given the gradient (for all parameters) $g$, we compute its $\ell_2$-norm $\|g\|
 
 
 
-> **Problem 4.6  (gradient_clipping): Implement gradient clipping (1 point)**
+> **Problem 4.6  (gradient_clipping): Implement gradient clipping (2 points)**
 >
 > Write a function that implements gradient clipping. Your function should take a list of parameters and a maximum $\ell_2$-norm. It should modify each parameter gradient in place. Use $\epsilon = 10^{-6}$ (the PyTorch default). Then, implement the adapter `[adapters.run_gradient_clipping]` and make sure it passes
 >
@@ -1600,7 +1624,7 @@ Loading data in this way simplifies training for a number of reasons. First, any
 
 
 
-> **Problem 5.1  (data_loading): Implement data loading (2points)**
+> **Problem 5.1  (data_loading): Implement data loading (2 points)**
 >
 > Write a function that takes a numpy array `x` (integer array with token IDs), a `batch_size`, a `context_length` and a PyTorch device string (e.g., `'cpu'` or `'cuda:0'`), and returns a pair of tensors: the sampled input sequences and the corresponding next-token targets. Both tensors should have shape `(batch_size, context_length)` containing token IDs, and both should be placed on the requested device. To test your implementation against our provided tests, you will first need to implement the test adapter at `[adapters.run_get_batch]`. Then, run
 >
@@ -1620,7 +1644,7 @@ A checkpoint should have all the states that we need to resume training. We of c
 
 
 
-> **Problem 5.2 (checkpointing): Implement model checkpointing (1point)**
+> **Problem 5.2 (checkpointing): Implement model checkpointing (2 points)**
 >
 > Implement the following two functions to load and save checkpoints:
 >
@@ -1660,7 +1684,7 @@ Now, it's finally time to put all of the components you implemented together int
 
 
 
-> **Problem 5.3 (training_together): Put it together (4points)**
+> **Problem 5.3 (training_together): Put it together (5 points)**
 >
 > Write a script that runs a training loop to train your model on user-provided input. In particular, we recommend that your training script allow for (at least) the following:
 >
@@ -1675,17 +1699,17 @@ Now, it's finally time to put all of the components you implemented together int
 
 # 6 Generating Text
 
-Now that we can train models, the last piece we need is the ability to generate text from our model. Recall that a language model takes in a (possibly batched) integer sequence of length `(sequence_length)` and produces a matrix of size `(sequence_length × vocab_size)`, where each element of the sequence is a probability distribution predicting the next word after that position. We will now write a few functinto a sampling scheme for new sequences.
+Now that we can train models, the last piece we need is the ability to generate text from our model. Recall that a language model takes in a (possibly batched) integer sequence of length `(sequence_length)` and produces a matrix of size `(sequence_length × vocab_size)`, where each element of the sequence is a probability distribution predicting the next word after that position. We will now write a few functions to turn this into a sampling scheme for new sequences.
 
 **Softmax.** By standard convention, the language model output is the output of the final linear layer (the “logits”) and so we have to turn this into a normalized probability via the *softmax* operation.
 
-**Decoding.** To generate text (decode) from our model, we will provide the model with a sequence of prefix tokens (the “prompt”), and ask it to produce a probability distribution over the vocabulary that predicts the next word in the sequence. Then, we will sample from this distribution over vocabulary items to determine the next output token.
+**Decoding.** To generate text (decode) from our model, we will provide the model with a sequence of prefix tokens (the “prompt”), and ask it to produce a probability distribution over the vocabulary that predicts the next word in the sequence. Then, we will sample from this distribution over the vocabulary items to determine the next output token.
 
 Concretely, one step of the decoding process should take in a sequence $x_{1..t}$ and return a token $x_{t+1}$ via the following equation:
 
 $$
 P(x_{t+1} = i \mid x_{1..t}) = \frac{\exp(v_i)}{\sum_j \exp(v_j)}, \quad
-v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocabsize}}
+v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocab\_size}}
 $$
 
 where TransformerLM is our model which takes as input a sequence of `sequence_length` and produces a matrix of size `(sequence_length × vocab_size)`. We take the last element of this matrix, as we are looking for the next word prediction at the $t$-th position.
@@ -1696,12 +1720,12 @@ This gives us a basic decoder by repeatedly sampling from these one-step conditi
 
 **First**, in *temperature scaling* we modify our softmax with a temperature parameter $\tau$, where the new softmax is:
 $$
-\text{softmax}(v, \tau)_i = \frac{\exp(v_i / \tau)}{\sum_{j=1}^{|\text{vocab\_size}|} \exp(v_j / \tau)} \tag{24}
+\text{softmax}(v, \tau)_i = \frac{\exp(v_i / \tau)}{\sum_{j=1}^{|\text{vocab\_size}|} \exp(v_j / \tau)}
 $$
 
 Note how setting $\tau \to 0$ makes it so that the largest element of $v$ dominates, and the output of the softmax becomes a one-hot vector concentrated at this maximal element.  
 
-**Second**, another trick is *nucleus* or *top-$p$ sampling*, where we modify the sampling distribution by truncating low-probability words. Let $q$ be a probability distribution that we get from a (temperature-scaled) softmax of size `(vocabsize)`. Nucleus sampling with hyperparameter $p$ produces the next token according to the equation:
+**Second**, another trick is *nucleus* or *top-$p$ sampling*, where we modify the sampling distribution by truncating low-probability words. Let $q$ be a probability distribution that we get from a (temperature-scaled) softmax of size `(vocab_size)`. Nucleus sampling with hyperparameter $p$ produces the next token according to the equation:
 $$
 P(x_{t+1} = i \mid q) = 
 \begin{cases} 
@@ -1712,17 +1736,10 @@ $$
 
 where $V(p)$ is the *smallest* set of indices such that $\sum_{j \in V(p)} q_j \geq p$.  You can compute this quantity easily by first sorting the probability distribution $q$ by magnitude, and selecting the largest vocabulary elements until you reach the target level of $\alpha$.
 
->**Problem 6: Decoding (3points)**
+>**Problem 6.1: Decoding (3 points)**
 >
->Implement two functions to decode from your Transformer_LM and LSTM_LM respectively. Your functions need to support the temperature scaling and top-p sampling tricks described above. We recommend you to implement the functions as instance functions of your LM classes.
+>Implement two functions to decode from your `TransformerLM` and `LSTMLM` respectively. Your functions need to support the temperature scaling and top-p sampling tricks described above. We recommend you to implement the functions as instance functions of your LM classes.
 >
->The following interface is recommended:
+>No pytest cases are provided, please make sure your functions are correct.
 >
->```python
->
->```
-
-
-
-
-
+>Please generate several pieces of stories (the beginning content can be determined by you freely), try different temperature and top-p settings. Report the outcomes as well as your findings briefly.
