@@ -64,7 +64,7 @@ Please `git clone` this repository. If there are any updates, we will notify you
 You will submit the following files to Gradescope:
 
 - `[Name_ID number_Report].pdf`: Answer all the written questions. Please typeset your responses.
-- `code.zip`: Contains all the code you've written.
+- `code.zip`: Contains all the code you've written. (Please exclude large data files and model checkpoints)
 
 ## Where to get datasets
 
@@ -78,7 +78,7 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 
 cd ..
 ```
-> It will take around 10 mins to download TinyStories. You can use a Hugging Face mirror (`export HF_ENDPOINT=...`) or aria2c to speed up the download.
+> It will take around 10 mins to download TinyStories using VPN. You can use a Hugging Face mirror (`export HF_ENDPOINT=...`) or `aria2c` to speed up the download. 
 
 # 2 Byte-Pair Encoding (BPE) Tokenizer
 
