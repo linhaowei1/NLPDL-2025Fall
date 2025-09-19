@@ -2,10 +2,13 @@ import os
 import sys
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Tuple, Dict, Optional
+
 import numpy as np
 import torch
 # import torch_npu ## Uncomment this line if you are using Ascend NPU
+
+from datasets import Dataset, DatasetDict
 import transformers
 from transformers import (
     AutoConfig,
@@ -18,6 +21,7 @@ import evaluate
 import peft
 import adapters
 import wandb
+
 from dataHelper import get_dataset
 
 # os.environ["WANDB_MODE"] = "offline" ## Uncomment this line if you cannot connect to wandb server
@@ -25,6 +29,8 @@ from dataHelper import get_dataset
 
 @dataclass
 class BaseArgs:
+    '''Base arguments for the training script.'''
+
     ## TODO: define your arguments here and set default values or fields
     dataset: None
     model_name: None
@@ -35,6 +41,8 @@ class BaseArgs:
 
 @dataclass
 class LoraArgs:
+    '''Arguments for LoRA.'''
+
     ## TODO: define your arguments here and set default values or fields
     rank: int
     alpha: int
@@ -44,7 +52,12 @@ class LoraArgs:
 logger = logging.getLogger(__name__)
 
 
-def print_trainable_parameters(model):  # for generic use
+def print_trainable_parameters(model):
+    """
+    Print out the number of trainable parameters in the model.
+    transformers models have a `print_trainable_parameters` method, but not all models have it.
+    """
+
     trainable_params = 0
     all_params = 0
     for _, param in model.named_parameters():
@@ -57,22 +70,31 @@ def print_trainable_parameters(model):  # for generic use
 
 
 def parse_arguments():
+    '''Parse command line arguments into dataclasses.'''
+
     ## TODO: parse arguments
-    parser = None  # use HfArgumentParser
+    parser = None
     raise NotImplementedError("Argument parsing not implemented yet!")
 
 
-def set_random_seed(seed: int):
+def set_random_seed(seed: int) -> None:
+    '''Set random seed for training.'''
+
     ## TODO: set random seed
     raise NotImplementedError("Random seed setting not implemented yet!")
 
 
-def set_logger():
-    ## TODO: set up logging such that the log messages are printed to stdout
+def set_logger() -> None:
+    '''Set up the logger to print messages to stdout.'''
+
+    ## TODO: set up logging
     raise NotImplementedError("Logger setup not implemented yet!")
 
 
-def load_data(dataset_name: str, sep_token: str = "<SEP>"):
+def load_data(dataset_name: str,
+              sep_token: str = "<SEP>") -> Tuple[DatasetDict, int]:
+    '''Load dataset and return the number of labels.'''
+
     ## TODO: load dataset using `get_dataset()`
     raw_dataset = None  # use get_dataset
     num_labels = None  # set the number of labels according to dataset
@@ -80,6 +102,8 @@ def load_data(dataset_name: str, sep_token: str = "<SEP>"):
 
 
 def get_model(model_name: str, num_labels: int):
+    '''Load model and tokenizer.'''
+
     ## TODO: get model and tokenizer
     config = None  # use AutoConfig
     tokenizer = None  # use AutoTokenizer
@@ -91,12 +115,16 @@ def get_model(model_name: str, num_labels: int):
 
 
 def tokenize_data(raw_dataset, tokenizer, max_length: int = 256):
+    '''Tokenize the dataset.'''
+
     ## TODO: tokenize dataset using tokenizer and dataset.map()
     train_dataset, eval_dataset = None, None
     return train_dataset, eval_dataset
 
 
 def get_lora_model(model, lora_args):
+    '''Initialize the model with LoRA modules.'''
+
     ## TODO: use LoRA to wrap your model
     model = None
     model.print_trainable_parameters()
@@ -104,6 +132,8 @@ def get_lora_model(model, lora_args):
 
 
 def get_adapter_model(model, adapter_args):
+    '''Initialize the model with Bottleneck Adapter modules.'''
+
     ## TODO: use Adapter to wrap your model
     model = None
     print_trainable_parameters(model)
@@ -111,13 +141,17 @@ def get_adapter_model(model, adapter_args):
 
 
 def get_data_collator(tokenizer):
+    '''Define data collator for padding.'''
+
     ## TODO: define data collator
     data_collator = None
     return data_collator
 
 
-def compute_metrics(p):
-    ## TODO: compute accuracy, macro F1 and micro F1
+def compute_metrics(pred) -> Dict[str, float]:
+    '''Compute accuracy, macro F1 and micro F1.'''
+
+    ## TODO: compute metrics with `evaluate` package
     return {
         "accuracy": None,
         "macro_f1": None,
@@ -127,22 +161,30 @@ def compute_metrics(p):
 
 
 def get_trainer():
+    '''Define Trainer for training and evaluation.'''
+    
     ## TODO: define Trainer with appropriate arguments
     trainer = None
     return trainer
 
 
 def main():
+    # Parse arguments
     base_args, train_args, adapter_args, lora_args = parse_arguments()
 
+    # Set seed before initializing model.
     set_random_seed(train_args.seed)
 
+    # Set up logging
     set_logger()
 
+    # load dataset
     raw_dataset, num_labels = load_data(base_args.dataset, base_args.sep_token)
 
+    # get model and tokenizer
     tokenizer, model = get_model(base_args.model_name, num_labels)
 
+    # tokenize dataset
     train_result, eval_result = tokenize_data(raw_dataset, tokenizer,
                                               base_args.max_length)
 
@@ -155,7 +197,6 @@ def main():
         else:
             raise ValueError("Unsupported PEFT method!")
 
-    ## TODO: define data collator
     data_collator = get_data_collator(tokenizer)
 
     ## TODO: initialize wandb and set config

@@ -1,0 +1,26 @@
+[project]
+name = "hw2-huggingface"
+version = "0.1.0"
+description = "hw2 environment"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "adapters>=1.2.0",
+    "bert-score>=0.3.13",
+    "datasets>=4.0.0",
+    "decorator>=5.2.1",
+    "deepspeed>=0.17.5",
+    "einops>=0.8.1",
+    "evaluate>=0.4.5",
+    "nltk>=3.9.1",
+    "numpy==1.26.4",
+    "peft>=0.17.1",
+    "pyarrow==20.0.0",
+    "pytest>=8.4.2",
+    "rouge>=1.0.1",
+    "scikit-learn>=1.7.2",
+    "setuptools>=80.9.0",
+    "torch==2.5.1",
+    "transformers>=4.51.3",
+    "wandb>=0.21.4",
+]

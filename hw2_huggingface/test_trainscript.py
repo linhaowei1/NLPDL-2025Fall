@@ -71,17 +71,7 @@ def test_compute_metrics():
     dummy_preds = DummyPredictions(preds=np.array(preds),
                                    labels=np.array(labels))
     metrics = compute_metrics(dummy_preds)
-
-    # Check keys and value ranges
-    assert "accuracy" in metrics
-    assert "macro_f1" in metrics
-    assert "micro_f1" in metrics
-    assert "weighted_f1" in metrics
-    assert 0.0 <= metrics["accuracy"] <= 1.0
-    assert 0.0 <= metrics["macro_f1"] <= 1.0
-    assert 0.0 <= metrics["micro_f1"] <= 1.0
-    assert 0.0 <= metrics["weighted_f1"] <= 1.0
-
+    
     # Check expected values (these are pre-calculated for the dummy data)
     expected_accuracy = 0.5
     expected_macro_f1 = 0.4666
