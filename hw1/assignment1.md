@@ -4,7 +4,7 @@ In this assignment, you will build all the components needed to train a standard
 ## What you will implement
 
 1. Byte-pair encoding (BPE) tokenizer (§2)
-2. Transformer language model (LM) (§3)
+2. Transformer language model and LSTM (§3)
 3. The cross-entropy loss function and the AdamW optimizer (§4)
 4. The training loop, with support for serializing and loading model and optimizer state (§5)
 
@@ -12,8 +12,8 @@ In this assignment, you will build all the components needed to train a standard
 
 1. Train a BPE tokenizer on the TinyStories dataset.
 2. Run your trained tokenizer on the dataset to convert it into a sequence of integer IDs.
-3. Train a Transformer LM on the TinyStories dataset.
-4. Generate samples and evaluate perplexity using the trained Transformer LM.
+3. Train the Transformer and LSTM on the TinyStories dataset.
+4. Generate samples and evaluate perplexity using the trained Transformer LM and LSTM.
 
 ## What you can use
 
@@ -254,7 +254,7 @@ Let's train a byte-level BPE tokenizer on the TinyStories dataset. Before you st
 
 **Parallelizing pre-tokenization.** You will find that a major bottleneck is the pre-tokenization step. You can speed up pre-tokenization by parallelizing your code with the built-in library `multiprocessing`. Concretely, we recommend that in parallel implementations of pre-tokenization, you chunk the corpus while ensuring your chunk boundaries occur at the beginning of a special token. You are free to use the starter code at the following link verbatim to obtain chunk boundaries, which you can then use to distribute work across your processes:
 
-[https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_basics/pretokenization_example.py](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_basics/pretokenization_example.py)
+[https://github.com/linhaowei1/NLPDL-2025Fall/hw1/basics/pretokenization_example.py](https://github.com/linhaowei1/NLPDL-2025Fall/hw1/basics/pretokenization_example.py)
 
 This chunking will always be valid, since we never want to merge across document boundaries. For the purposes of the assignment, you can always split in this way. Don't worry about the edge case of receiving a very large corpus that does not contain `<|endoftext|>`.
 
@@ -1333,13 +1333,15 @@ Smoothly, you can put the `LSTM` together with other modules you have already de
 >
 > No pytest cases are provided for this problem, please make sure your implementation is correct.
 
-# 4 Training a Transformer LM
+# 4 LM Training
 
-We now have the steps to preprocess the data (via tokenizer) and the model (Transformer). What remains is to build all of the code to support training. This consists of the following:
+We now have the steps to preprocess the data (via tokenizer) and the model (Transformer and LSTM). What remains is to build all of the code to support training. This consists of the following:
 
 - Loss: we need to define the loss function (cross-entropy).
 - Optimizer: we need to define the optimizer to minimize this loss (AdamW).
 - Training loop: we need all the supporting infrastructure that loads data, saves checkpoints, and manages training.
+
+In fact, the training procedure for LSTM is identical to that of Transformer. In the following Sections 4 and 5 we therefore use Transformer as the running example, and the same implementation can be applied to LSTM without modification.
 
 ## 4.1 Cross-entropy loss
 
@@ -1610,7 +1612,7 @@ Given the gradient (for all parameters) $g$, we compute its $\ell_2$-norm $\|g\|
 
 
 
-#5 Training loop
+# 5 Training loop
 
 We will now finally put together the major components we've built so far: the tokenized data, the model, and the optimizer. 
 
