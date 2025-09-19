@@ -78,6 +78,7 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 
 cd ..
 ```
+> It will take around 10 mins to download TinyStories. You can use a Hugging Face mirror (`export HF_ENDPOINT=...`) or aria2c to speed up the download.
 
 # 2 Byte-Pair Encoding (BPE) Tokenizer
 
