@@ -1712,7 +1712,7 @@ Concretely, one step of the decoding process should take in a sequence $x_{1..t}
 
 $$
 P(x_{t+1} = i \mid x_{1..t}) = \frac{\exp(v_i)}{\sum_j \exp(v_j)}, \quad
-v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocab\_size}}
+v = TransformerLM(x_{1..t})_t \in \mathbb{R}^{\text{vocabsize}}
 $$
 
 where TransformerLM is our model which takes as input a sequence of `sequence_length` and produces a matrix of size `(sequence_length × vocab_size)`. We take the last element of this matrix, as we are looking for the next word prediction at the $t$-th position.
@@ -1723,7 +1723,7 @@ This gives us a basic decoder by repeatedly sampling from these one-step conditi
 
 **First**, in *temperature scaling* we modify our softmax with a temperature parameter $\tau$, where the new softmax is:
 $$
-\text{softmax}(v, \tau)_i = \frac{\exp(v_i / \tau)}{\sum_{j=1}^{|\text{vocab\_size}|} \exp(v_j / \tau)}
+\text{softmax}(v, \tau)_i = \frac{\exp(v_i / \tau)}{\sum_{j=1}^{|\text{vocabsize}|} \exp(v_j / \tau)}
 $$
 
 Note how setting $\tau \to 0$ makes it so that the largest element of $v$ dominates, and the output of the softmax becomes a one-hot vector concentrated at this maximal element.  
