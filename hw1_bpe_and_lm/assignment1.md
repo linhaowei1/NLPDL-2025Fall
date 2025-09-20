@@ -37,13 +37,20 @@ We strongly encourage you to disable AI autocomplete (e.g., Cursor Tab, GitHub C
 ## Setup
 
 ### Environment
-We manage our environments with `uv` to ensure reproducibility, portability, and ease of use. You can find the installation method and usage of uv at [https://github.com/linhaowei1/NLPDL-2025Fall]( https://github.com/linhaowei1/NLPDL-2025Fall).
+We use `uv` with a per-assignment virtual environment. Run commands from this `hw1_bpe_and_lm` directory (or use `--directory`).
 
-You can now run any code in the repo using
 ```
-uv run <python_file_path>
+# One-time setup for this assignment
+uv sync
+
+# Run Python or tests in this assignment's environment
+uv run python -V
+uv run pytest
+
+# From repo root (alternative)
+uv run --directory hw1_bpe_and_lm pytest
 ```
-and the environment will be automatically solved and activated when necessary.
+uv will automatically resolve and activate the environment specified by this assignment’s `pyproject.toml`.
 ### Run unit tests
 ```sh
 uv run pytest

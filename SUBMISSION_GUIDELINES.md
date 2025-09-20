@@ -4,7 +4,7 @@
 
 **DO NOT submit the entire repository.** This includes generated files and directories that are not your direct source code.
 
--   `.venv/` directory (virtual environment)
+-   `.venv/` directories inside each assignment (per-assignment virtual environments)
 -   `.git/` directory (git history)
 -   `__pycache__/` directories (Python cache)
 -   `.pytest_cache/` directory
@@ -38,57 +38,24 @@ The quick submission script provided below is already configured to use this fil
 
 ## What TO Submit
 
-For each homework assignment, create a ZIP file containing **only the specific homework directory** with your implementation.
+For each assignment, submit a ZIP containing only the specific homework directory with your implementation. Preferred flow:
 
-### Example: Submitting Homework 0
+```bash
+# from inside the assignment directory
+./make_submission.sh <LASTNAME> <FIRSTNAME> <STUDENTID>
 
-1. **Navigate to your local repository:**
+# examples
+cd hw0_hello_world && ./make_submission.sh DOE JANE 12345678
+cd ../hw1_bpe_and_lm && ./make_submission.sh SMITH JOHN 11223344
+```
 
-   ```bash
-   cd NLPDL-2025Fall
-   ```
+Alternatively, you may use the unified helper from the repo root:
 
-2. **Ensure your implementation is complete:**
+```bash
+./submit_hw.sh <hw_directory> <LASTNAME> <FIRSTNAME> <STUDENTID>
+```
 
-   ```bash
-   # Test your implementation first
-   make test-hw0
-   # or
-   uv run pytest hw0_hello_world/
-   ```
-
-3. **Create the submission ZIP:**
-
-   ```bash
-   # Create a clean copy of just the homework directory
-   cp -r hw0_hello_world hw0_hello_world_submission
-   
-   # Remove any cache directories
-   find hw0_hello_world_submission -name "__pycache__" -type d -exec rm -rf {} +
-   find hw0_hello_world_submission -name "*.pyc" -delete
-   
-   # Create the ZIP file (replace with your info)
-   zip -r hw0_submission_DOE_JANE_12345678.zip hw0_hello_world_submission/
-   
-   # Clean up the temporary directory
-   rm -rf hw0_hello_world_submission
-   ```
-
-4. **Verify your ZIP contents:**
-
-   ```bash
-   unzip -l hw0_submission_DOE_JANE_12345678.zip
-   ```
-
-   Your ZIP should contain a structure like this:
-
-   ```
-   hw0_hello_world_submission/
-   ├── __init__.py
-   ├── pipeline.py          # ← Your implementation here
-   ├── README.md
-   └── test_pipeline.py
-   ```
+Both paths run tests and produce `hwX_submission_LASTNAME_FIRSTNAME_STUDENTID.zip`, printing contents for verification.
 
 ## General Submission Format
 
@@ -107,7 +74,7 @@ For any homework assignment `hwX_name`, your submission should be a ZIP file nam
 
 Before submitting, ensure:
 
--   [ ] **Tests pass locally**: Run `make test-hwX` or `uv run pytest hwX_*/` and verify all tests pass.
+-   [ ] **Tests pass locally**: Run `./submit_hw.sh ...` or `uv run --directory <hw_dir> pytest` and verify tests pass.
 -   [ ] **Only homework directory included**: Your ZIP contains only the `hwX_*` directory with your implementation.
 -   [ ] **No cache files**: No `__pycache__`, `.pyc`, or other generated files in your ZIP.
 -   [ ] **No large files**: Model checkpoints or large data files are excluded (using `.submission_ignore` is recommended).
@@ -115,88 +82,9 @@ Before submitting, ensure:
 -   [ ] **File integrity**: Unzip and verify the contents are correct and complete.
 
 
-## Quick Submission Script
+## Built-in submission helper
 
-You can use this script to automate the submission process. It handles cleaning cache files and excluding files listed in `.submission_ignore`.
-
-```bash
-#!/bin/bash
-# save as submit_hw.sh and run: bash submit_hw.sh hw0_hello_world LASTNAME FIRSTNAME STUDENTID
-
-HW_DIR=$1
-LASTNAME=$2
-FIRSTNAME=$3
-STUDENTID=$4
-
-if [ $# -ne 4 ]; then
-    echo "Usage: bash submit_hw.sh <hw_directory> <LASTNAME> <FIRSTNAME> <STUDENTID>"
-    echo "Example: bash submit_hw.sh hw0_hello_world SMITH JOHN 11223344"
-    exit 1
-fi
-
-# Extract homework number from directory name
-HW_NUM=$(echo $HW_DIR | sed 's/hw\([0-9]\+\).*/\1/')
-
-# Test the homework first
-echo "Testing homework implementation..."
-uv run pytest $HW_DIR/
-if [ $? -ne 0 ]; then
-    echo "❌ Tests failed! Please fix your implementation before submitting."
-    exit 1
-fi
-
-# Create submission
-SUBMISSION_NAME="${HW_DIR}_submission"
-SUBMISSION_ZIP="hw${HW_NUM}_submission_${LASTNAME}_${FIRSTNAME}_${STUDENTID}.zip"
-IGNORE_FILE="${HW_DIR}/.submission_ignore"
-EXCLUDE_ARGS=()
-
-echo "Creating submission ZIP..."
-cp -r $HW_DIR $SUBMISSION_NAME
-
-# Clean cache files
-find $SUBMISSION_NAME -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
-find $SUBMISSION_NAME -name "*.pyc" -delete 2>/dev/null
-
-# Add files from .submission_ignore to exclude list
-if [ -f "$IGNORE_FILE" ]; then
-    echo "Found .submission_ignore. Excluding specified files/directories."
-    while IFS= read -r pattern; do
-        # Skip empty lines or comments
-        [[ -z "$pattern" || "$pattern" == \#* ]] && continue
-        EXCLUDE_ARGS+=("-x" "${SUBMISSION_NAME}/${pattern}")
-    done < "$IGNORE_FILE"
-fi
-
-# Create the zip file with exclusions
-zip -r "$SUBMISSION_ZIP" "$SUBMISSION_NAME/" "${EXCLUDE_ARGS[@]}"
-
-rm -rf $SUBMISSION_NAME
-
-echo "✅ Submission created: $SUBMISSION_ZIP"
-echo "📝 Contents:"
-unzip -l $SUBMISSION_ZIP
-```
-
-### To use this script:
-
-1. Save the code above into a file named `submit_hw.sh`.
-
-2. Make it executable:
-
-   Bash
-
-   ```
-   chmod +x submit_hw.sh
-   ```
-
-3. Run it from your main repository directory (`NLPDL-2025Fall`):
-
-   Bash
-
-   ```
-   ./submit_hw.sh hw0_hello_world SMITH JOHN 11223344
-   ```
+Use the provided `submit_hw.sh` in the repo root. It cleans caches and respects `.submission_ignore` for excluding large files (e.g., checkpoints, datasets). Make sure `zip` is installed on your system.
 
 ## Troubleshooting
 
@@ -210,3 +98,6 @@ unzip -l $SUBMISSION_ZIP
   - A: No, do not modify the provided test files. Your implementation should pass the original tests as provided.
 - **Q: What if I added extra dependencies?**
   - A: Contact the course staff before submission. Generally, you should only use the dependencies specified in the assignment.
+
+
+

@@ -8,17 +8,16 @@ This repository is organized into directories, with each directory corresponding
 ```bash
 NLPDL-2025Fall/
 ├── .gitignore
-├── .python-version         # Python version specification
-├── Makefile
 ├── README.md
-├── pyproject.toml         # Project configuration and dependencies
-├── uv.lock               # Locked dependency versions
 ├── hw0_hello_world/
 │   ├── __init__.py
 │   ├── pipeline.py
 │   ├── README.md
-│   └── test_pipeline.py
-└── hw1_.../
+│   ├── test_pipeline.py
+│   └── pyproject.toml      # Assignment-specific environment (uv)
+└── hw1_bpe_and_lm/
+    ├── assignment1.md
+    ├── pyproject.toml      # Assignment-specific environment (uv)
     └── ...
 ```
 
@@ -62,39 +61,40 @@ git clone <repository_url>
 cd <repo_name>
 ```
 
-2. **Set up your Python environment:**
-The project is configured to use Python 3.12. uv will automatically create a virtual environment and install the correct Python version if needed.
+2. **Set up your Python environment (per assignment):**
+Each homework directory is its own uv project. Work inside the assignment directory so uv can manage a dedicated `.venv/` for that assignment.
 
 ```bash
-# Install dependencies and create virtual environment
+# Example: Homework 0
+cd hw0_hello_world
+uv sync   # creates .venv/ in hw0_hello_world and installs deps
+
+# Example: Homework 1
+cd ../hw1_bpe_and_lm
 uv sync
 ```
 
-This command will:
-- Create a virtual environment in `.venv/`
-- Install Python 3.12 if not available
-- Install all project dependencies
+This will:
+- Create a virtual environment in the assignment directory’s `.venv/`
+- Install a compatible Python version (e.g., 3.12) if needed
+- Install that assignment’s dependencies
 
 3. **Complete the assignment:**
 Navigate to the specific homework directory (e.g., `cd hw0_hello_world`) and follow the instructions in its `README.md` to complete your implementation in the provided Python files.
 
 4. **Run tests:**
-Use uv to run tests in the managed environment:
+Run tests from within each assignment directory (recommended), or use uv’s directory flag.
 
 ```bash
-# Run tests for a specific homework (recommended)
-uv run pytest hw0_hello_world/
-
-# Or run all tests
+# From inside an assignment directory
 uv run pytest
+
+# Or from the repo root using the assignment directory
+uv run --directory hw0_hello_world pytest
+uv run --directory hw1_bpe_and_lm pytest
 ```
 
-You can also use the make commands:
-```bash
-make test-hw0
-```
-
-**Note:** All commands should be run with `uv run` prefix to ensure they execute in the correct virtual environment with the right dependencies.
+**Note:** Use `uv run` within the assignment’s directory (or `--directory`) to ensure the correct per-assignment environment is used.
 
 ### Additional uv Commands
 
@@ -105,62 +105,42 @@ uv add <package_name>
 # Remove a dependency  
 uv remove <package_name>
 
-# Run any Python command in the environment
+# Run any Python command in the assignment environment
 uv run python <script.py>
 
-# Activate the virtual environment manually (optional)
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Activate the virtual environment manually (optional, from assignment dir)
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 ```
 
 You should see all tests passing if your implementation is correct.
 
-## Guidelines for TAs
-
-This repository is designed to be a template for creating new homework assignments. To contribute a new assignment (e.g., `hw1_new_task`):
-
-1. Create a new directory:
-
-```bash
-mkdir hw1_new_task
-```
-
-2. Follow the established structure:
-
-- Add a `README.md` with clear instructions.
-- Provide a skeleton Python file (e.g., `pipeline.py`) with function stubs for students to complete. Use comments like # TODO: Implement this function.
-- Create a `test_pipeline.py` file with comprehensive pytest tests. Include both public tests (visible to students) and potentially hidden tests for grading.
-- Add an empty `__init__.py` file to make the directory a package.
-
-3. Update the root Makefile:
-Add a new command to run tests for your new assignment. For example:
-```bash
-test-hw1:
-    @echo "Running tests for Homework 1"
-    @uv run pytest hw1_new_task/
-```
-Also, add your new command to the `test-all` rule.
-
-4. Update dependencies if needed:
-If your assignment requires additional Python packages, add them using:
-```bash
-uv add <package_name>
-```
-This will automatically update both `pyproject.toml` and `uv.lock` files.
-
-By following this template, we can ensure consistency and a smooth experience for everyone involved in the course.
-
 ## Homework Submission
 
-**Important:** Students should NOT submit the entire repository. Please refer to the [SUBMISSION_GUIDELINES.md](SUBMISSION_GUIDELINES.md) file for detailed instructions on:
+**Important:** Do NOT submit the entire repository. Submit only the specific homework directory. See [SUBMISSION_GUIDELINES.md](SUBMISSION_GUIDELINES.md) for details.
 
-- What files to include in your submission
-- How to create a proper submission ZIP file
-- Naming conventions for submissions
-- Testing your code before submission
-- Troubleshooting common issues
+### Preferred: per-assignment submission scripts
 
-**Quick Summary for Students:**
-1. Test your implementation: `make test-hw0`
-2. Create a ZIP file containing ONLY the homework directory (e.g., `hw0_hello_world/`)
-3. Name your submission: `hwX_submission_LASTNAME_FIRSTNAME_STUDENTID.zip`
-4. Submit the ZIP file through the course submission system
+From inside each assignment directory, run:
+
+```bash
+# hw0
+cd hw0_hello_world
+./make_submission.sh <LASTNAME> <FIRSTNAME> <STUDENTID>
+
+# hw1
+cd ../hw1_bpe_and_lm
+./make_submission.sh <LASTNAME> <FIRSTNAME> <STUDENTID>
+```
+
+Each script:
+- Runs tests via the assignment’s `uv` environment
+- Creates `hwX_submission_LASTNAME_FIRSTNAME_STUDENTID.zip`
+- Prints contents for verification
+
+Alternative unified helper (from repo root):
+
+```bash
+./submit_hw.sh <hw_directory> <LASTNAME> <FIRSTNAME> <STUDENTID>
+```
+
+Refer to the guidelines for exclusions and large files.
