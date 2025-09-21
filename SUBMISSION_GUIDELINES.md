@@ -48,14 +48,7 @@ For each assignment, submit a ZIP containing only the specific homework director
 cd hw0_hello_world && ./make_submission.sh DOE JANE 12345678
 cd ../hw1_bpe_and_lm && ./make_submission.sh SMITH JOHN 11223344
 ```
-
-Alternatively, you may use the unified helper from the repo root:
-
-```bash
-./submit_hw.sh <hw_directory> <LASTNAME> <FIRSTNAME> <STUDENTID>
-```
-
-Both paths run tests and produce `hwX_submission_LASTNAME_FIRSTNAME_STUDENTID.zip`, printing contents for verification.
+the scripts run tests and produce `hwX_submission_LASTNAME_FIRSTNAME_STUDENTID.zip`, printing contents for verification.
 
 ## General Submission Format
 
@@ -89,7 +82,7 @@ Use the provided `submit_hw.sh` in the repo root. It cleans caches and respects 
 ## Troubleshooting
 
 - **Q: My tests are failing. What should I do?**
-  - A: Do not submit until all tests pass. Review the assignment README and your implementation. Ask a TA for help if needed.
+  - A: You could submit without all tests passing, but you cannot get the full scores if you do. Review the assignment README and your implementation. Ask a TA for help if needed.
 - **Q: My code needs a model checkpoint. How do I submit it?**
   - A: **Do not include the model checkpoint in your ZIP file.** Your code should be able to load a model from a specified path (e.g., `checkpoints/model.pth`). The grading script will place the necessary model file there before running your code. Use the `.submission_ignore` file to exclude it.
 - **Q: Should I include my own additional test files?**
