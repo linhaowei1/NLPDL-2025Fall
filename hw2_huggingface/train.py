@@ -22,7 +22,7 @@ import peft
 import adapters
 import wandb
 
-from dataHelper import get_dataset
+from .dataHelper import get_dataset
 
 # os.environ["WANDB_MODE"] = "offline" ## Uncomment this line if you cannot connect to wandb server
 

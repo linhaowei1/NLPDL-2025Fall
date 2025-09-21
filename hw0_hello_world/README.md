@@ -18,16 +18,17 @@ For example, if the input `name` is `"World"`, the function should return `"Hell
 
 Once you have implemented the function, you can (and should!) test it locally to ensure it works as expected.
 
-Navigate to the **root directory** of the repository and run the following command:
+This assignment uses a per-assignment environment managed by uv. From this `hw0_hello_world` directory, set up and run tests with:
 
 ```
-make test-hw0
+uv sync
+uv run pytest
 ```
 
-Alternatively, you can run `pytest` directly on this directory:
+Alternatively, from the repository root you can run:
 
 ```
-pytest hw0_hello_world/
+uv run --directory hw0_hello_world pytest
 ```
 
 If your implementation is correct, you will see a message indicating that all tests have passed. If there are any failures, the output will help you diagnose what might be wrong with your code.

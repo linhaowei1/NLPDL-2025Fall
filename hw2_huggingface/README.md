@@ -1,16 +1,76 @@
 # Homework 2: Huggingface & PEFT
 
-**Objective:** This assignment is designed to help you study [Huggingface🤗](https://huggingface.co/)(VPN is needed), which is the most popular tool for NLP researchers. Through this assignment, you will be able to write codes easily for nearly all the NLP tasks.
+This assignment is designed to help you study [Huggingface🤗](https://huggingface.co/), which is the most popular tool for NLP researchers.
 
-## Notice for HUAWEI Ascend Users
+## Task Overview
+
+1. Implement dataset loading script supporting few-shot and aggregation
+2. Implement a training script using `🤗transformers` and train some models
+3. Add PEFT methods in your script, then compare it with full fine-tuning.
+4. Use LLaMA-Factory framework to train a LLM and compute metrics.
+
+## Setup
+
+### Environment and Unit Test
+
+We use `uv` with a per-assignment virtual environment. Run commands from this `hw2_huggingface` directory (or use `--directory`).
+
+```sh
+# One-time setup for this assignment
+uv sync
+
+# One-time setup for this assignment (for Ascend users)
+uv sync --extra npu
+
+# Run Python or tests in this assignment's environment
+uv run pytest . --ignore=LLaMA-Factory
+
+# From repo root (alternative)
+uv run --directory hw2_huggingface pytest . --ignore=LLaMA-Factory
+```
+
+`uv` will automatically resolve and activate the environment specified by this assignment’s `pyproject.toml`.
+
+For task 4 (LLaMA-Factory), just follow its README.md.
+
+```sh
+git clone https://github.com/hiyouga/LLaMA-Factory.git
+cd LLaMA-Factory
+
+uv sync --extra torch --extra metrics --extra deepspeed --prerelease=allow
+
+# for HUAWEI Ascend
+uv sync --extra torch-npu --extra metrics --extra deepspeed --prerelease=allow
+
+# set FORCE_TORCHRUN to activate deepspeed
+FORCE_TORCHRUN=1 uv run --prerelease=allow llamafactory-cli train examples/train_lora/llama3_lora_pretrain.yaml
+```
+
+If you encounter any problems about dependencies and environment setup in task 4, please turn to use conda environment and re-install LLaMA-Factory.
+
+### Notice for All Students
+
+- VPN is needed to connect [Huggingface🤗](https://huggingface.co/)
+- Directly download datasets and models from [Huggingface🤗](https://huggingface.co/) is costly and slow. An alternative way is to use its mirror site [HF-Mirror](https://hf-mirror.com). Execute the command below before running your script.
+
+```sh
+export HF_ENDPOINT=https://hf-mirror.com
+```
+
+### Notice for HUAWEI Ascend Users
 
 If you are using HUAWEI Ascend NPU:
 
 - Choose docker image with `cann>=8.0.rc1`
-- Enter `uv add torch-npu` before `uv sync`
 - Import `torch_npu` package before importing your training script
 - Replace `torch` to `torch-npu` when installing LLaMa-Factory in Task 4 (see [here](https://ascend.github.io/docs/sources/llamafactory/install.html))
 - Open "Remote Development using SSH", and use `scp` commands to transmit your local dataset
+
+## Statement on AI tools
+
+Prompting LLMs such as ChatGPT is permitted for low-level programming questions or high-level conceptual questions about language models, but using it directly to solve the problem is not allowed.
+
+We strongly encourage you to disable AI autocomplete (e.g., Cursor Tab, GitHub CoPilot) in your IDE when completing assignments (though non-AI autocomplete, e.g., autocompleting function names is totally fine). We have found that AI autocomplete makes it much harder to engage deeply with the material.
 
 ## Task 1: Build Your Dataset
 
@@ -98,13 +158,7 @@ After you finish the script,
 - To make the results reliable, you need to run the same experiments several times and report the standard deviation.
 - Adjust the batch size, epoch number and learning rate to make your results converge stably.
   > These models are highly capable and have been pre-trained on a large scale of data. Set a **small learning rate** and run **few epoches** to avoid overfitting or even catastrophic forgetting!
-- Directly download model from [Huggingface🤗](https://huggingface.co/) is costly and slow. An alternative way is to use its mirror site [HF-Mirror](https://hf-mirror.com). Execute the command below before running your script.
-
-```sh
-export HF_ENDPOINT=https://hf-mirror.com`
-```
-
-- It is recommended to write a shell script to avoid entering parameters every time.
+- It is recommended to write a shell script to avoid entering parameters every time. Don't forget to set `HF_ENDPONIT` in your shell script!
 
 ## Task 3: PEFT
 
@@ -129,7 +183,6 @@ Hint:
 Nowadays, there are more easy-to-operate frameworks available for training or inferring large models based on the pytorch and transformers libraries, among which [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory) is one of the most popular. In this task, you will try to fine-tune a model without writing any script, and evaluate your model with some classic metrics.
 
 1. Setup `LLaMA-Factory` according to the documents.
-   - We strongly recommend you to install `llamafactory` and train your model in your conda environment. Use `uv` in `llamafactory` may cause unexpected environment dependency error. In your evaluation script, you can change back to `uv`.
    - Remember to add `deepspeed` dependencies!
 2. Add `knkarthick/samsum` into `LLama-Factory/data/dataset_info.json`
 3. Write a `yaml` file to fine-tune `Qwen/Qwen1.5-0.5B` on the training set with LoRA.
@@ -145,24 +198,11 @@ Nowadays, there are more easy-to-operate frameworks available for training or in
    - Set `facebook/bart-large` as the scoring model of `BERTScore`
    - `bert_score` package supports batch process of multiple reference-candidate pairs, but `rouge` and `bleu` in nltk can only process one pair per call.
 
-## Test and Submit
+After finish the tasks, you should copy your written `yaml` files for training and merging to `hw2_huggingface` directory.
 
-Once you have implemented the script, you should test it locally to ensure it works as expected.
+## Submission
 
-**Remove all `raise NotImplementedError` and `pass` statements before testing your code!**
+You will submit the following files to Gradescope:
 
-Navigate to the **root directory** of the repository and run the following command:
-
-```
-make test-hw2
-```
-
-Alternatively, you can run `pytest` directly on this directory:
-
-```
-pytest hw2_huggingface/
-```
-
-If your implementation is correct, you will see a message indicating that all tests have passed. If there are any failures, the output will help you diagnose what might be wrong with your code. However, the local test is **part of your code**. You should make sure that your script is runnable, as we cannot easily test them automatically.
-
-After finish all the tasks, you should submit your code and a report, which includes your experiment setup, results and your answers to the questions mentioned above. Any other observations or thoughts are welcome.
+- `[Name_ID number_Report].pdf`: Record your experiment setup, results and your analysis. All the questions in the guidance or code template should be answered. For experiment results, you can copy images from wandb website.
+- `code.zip`: Contains all the code you've written. (Please exclude large data files and model checkpoints)
