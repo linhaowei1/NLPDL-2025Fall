@@ -42,11 +42,14 @@ uv sync --extra torch --extra metrics --extra deepspeed --prerelease=allow
 # for HUAWEI Ascend
 uv sync --extra torch-npu --extra metrics --extra deepspeed --prerelease=allow
 
+# install wandb for recoding
+uv pip install wandb
+
 # set FORCE_TORCHRUN to activate deepspeed
 FORCE_TORCHRUN=1 uv run --prerelease=allow llamafactory-cli train examples/train_lora/llama3_lora_pretrain.yaml
 ```
 
-If you encounter any problems about dependencies and environment setup in task 4, please turn to use conda environment and re-install LLaMA-Factory.
+It should be fine if you successfully setup your environment separately in `hw2_huggingface` directory and `LLaMA-Factory` directory. However, if you encounter any problems about dependencies and environment setup in task 4, please firstly fallback to conda environment and re-install LLaMA-Factory in order to avoid wasting time on unnecessary environment configurations.
 
 ### Notice for All Students
 
@@ -83,7 +86,7 @@ from dataHelper import get_dataset
 1. It should contain a get_dataset() function like this.
 
 ```python
-def get_dataset(dataset_name, sep_token):
+def get_dataset(dataset_name: str, sep_token: str = '<SEP>'):
 	'''
 	dataset_name: str, the name of the dataset
 	sep_token: str, the sep_token used by tokenizer(e.g. '<sep>')
@@ -101,22 +104,22 @@ def get_dataset(dataset_name, sep_token):
 
    > Aspect-based sentiment analysis (ABSA) is a text analysis technique that categorizes data by aspect and identifies the sentiment attributed to each one. Aspect-based sentiment analysis can be used to analyze customer feedback by associating specific sentiments with different aspects of a product or service.
 
-   Here we use data from SemEval-2014 Task 4, which is already downloaded (see [google drive](https://drive.google.com/drive/folders/1H5rmibrg4VfEvM6uqobkrZlGla3xk78-?usp=share_link)). You should prepare the dataset as a `DatasetDict` object, which contains 'train' and 'test' items (you don't need to care about the dev set) and each item is a `Dataset` object that contains `text` and `label`.
+   Here we use data from SemEval-2014 Task 4 (see [google drive](https://drive.google.com/drive/folders/1H5rmibrg4VfEvM6uqobkrZlGla3xk78-?usp=share_link)). Prepare the dataset as a `DatasetDict` object with 'train' and 'test' items (you don't need to care about the dev set), both of which are `Dataset` object that contains `text` and `label`.
 
-   - Hint 1. `text` and `label` are actually two lists of data (the text list should contain text strings, and label list contains integers $0\sim\#label-1$). See Tutorials to know this data structure better.
+   - Hint 1. `text` and `label` are actually two lists of data (the text list should contain text strings, and label list contains integers $0\sim\#label-1$).
    - Hint 2. Refer to more ABSA task introduction to know how to prepare `text`. There are many ways to format inputs, and you can use `sep_token` to process the raw text.
-   - Hint 3. In this dataset, text is the term and the description, and label is the sentiment polarity.
+   - Hint 3. In this dataset, `text` is the term and the description, and `label` is the sentiment polarity.
 
    b. Implement `acl_sup` dataset for citation intent classification.
 
-   Download `ACL-ARC` dataset (see [google drive](https://drive.google.com/drive/folders/1-8Ly4Jk12LHnkMKnxhuXieVNMA9cyORQ), choose `acl_sup` directory), then process it to be a classification dataset just like the above two datasets (with 'train' and 'test' datasets, ignore the 'dev' dataset).
+   Download `ACL-ARC` dataset (see [google drive](https://drive.google.com/drive/folders/1-8Ly4Jk12LHnkMKnxhuXieVNMA9cyORQ), choose `acl_sup` directory), then process it to be a classification dataset just like the above two datasets (with `train` and `test` datasets, ignore the `dev` dataset).
 
    c. Implement `agnews_sup` dataset.
 
    The agnews dataset is a bit large, here we just use its provided test dataset.
 
-   - Remove the title, use the 'description' as input text, predict the label.
-     - if you use `load_dataset` from huggingface, then you don't need to process 'text', since the title is already removed and the 'description' is 'text'.
+   - Remove the title, use the `description` as input text, predict the label.
+     - if you use `load_dataset` from huggingface, then you don't need to process `text`, since the title is already removed and the `description` is `text`.
    - Random split the dataset into training and test set with **ratio 9:1** using `train_test_split` API from huggingface `datasets` with `random seed = 2025`.
 
 3. Implement the **few-shot version** of the above tasks: named `restaurant_fs`, `laptop_fs`, `acl_fs`, `agnews_fs`. To prepare a few-shot dataset with appropriate size, you can refer to [this paper](https://arxiv.org/pdf/2109.04332.pdf) for its experimental setup.
@@ -149,7 +152,7 @@ Please use all the packages, functions or classes mentioned below in your traini
 7. `evaluate`. You need to compute `accuracy`, `micro_f1`,`macro_f1` and `weight_f1` using [this package](https://huggingface.co/docs/evaluate/index).
 8. `DataCollatorWithPadding`. Why you should use data collator before training?
 9. `Trainer` and `TrainingArguments`. This is the main training engine of 🤗transformers.
-10. `wandb`. It can track your experiments and easily interact with 🤗Huggingface. You may [sign up an account](http://wandb.ai) then read the [documents](https://docs.wandb.ai/guides/integrations/huggingface) to setup your recording. Use offline mode if you are unable to connect `wandb` server on your machine.
+10. `wandb`. It can track your experiments and easily interact with 🤗Huggingface. You may [sign up an account](http://wandb.ai) then read the [documents](https://docs.wandb.ai/guides/integrations/huggingface) to setup your recording. If you are unable to connect `wandb` server on your machine, set environment variable `WANDB_MODE="offline"` before running your script, and execute `wandb sync <your_wandb_offline_dir>` to upload them after training.
 
 After you finish the script,
 
@@ -184,25 +187,30 @@ Nowadays, there are more easy-to-operate frameworks available for training or in
 
 1. Setup `LLaMA-Factory` according to the documents.
    - Remember to add `deepspeed` dependencies!
+   - What are the differences among deepspeed z0, z1, z2 and z3?
 2. Add `knkarthick/samsum` into `LLama-Factory/data/dataset_info.json`
 3. Write a `yaml` file to fine-tune `Qwen/Qwen1.5-0.5B` on the training set with LoRA.
-   - Set `template: qwen` to correctly load prompt template
-   - Set `cutoff_len: 2048`
-   - Set `lora_target: all`
-   - Set `max_samples: 3000`
+   - Set `template: qwen` to correctly load prompt template.
+   - Set `cutoff_len: 2048`.
+   - To record your training with `wandb`, set `report_to: wandb` and your custom run name.
    - You can find example files in `LLama-Factory/examples/train_lora` or [here](https://ascend.github.io/docs/sources/llamafactory/quick_start.html).
 4. Write a `yaml` file to merge your lora module model with the original model.
    - You can find example files in `LLama-Factory/examples/merge_lora`.
 5. Start the engine to fine-tune your model.
 6. Implement `eval.py` to calculate `BLEU`, `ROUGE-L` and `BERTScore-F1`, and run your evaluation on the test set.
    - Set `facebook/bart-large` as the scoring model of `BERTScore`
-   - `bert_score` package supports batch process of multiple reference-candidate pairs, but `rouge` and `bleu` in nltk can only process one pair per call.
+   - `bert_score` package supports batch process of multiple reference-candidate pairs, but please be aware that many other packages can only process one pair per function call.
 
-After finish the tasks, you should copy your written `yaml` files for training and merging to `hw2_huggingface` directory.
+After finish the tasks, you should copy your written `yaml` files for training and merging to `hw2_huggingface` directory. Record your training process by inserting images from `wandb` in your report.
 
 ## Submission
 
-You will submit the following files to Gradescope:
+You will submit the following files to [Teaching and Learning @ PKU](https://course.pku.edu.cn/):
 
 - `[Name_ID number_Report].pdf`: Record your experiment setup, results and your analysis. All the questions in the guidance or code template should be answered. For experiment results, you can copy images from wandb website.
-- `code.zip`: Contains all the code you've written. (Please exclude large data files and model checkpoints)
+- `code.zip`: Contains all the code you've written. It should contains:
+  - `dataHelper.py` for task 1
+  - `train.py` for task 2 and task 3
+  - `eval.py` for task 4
+  - 2 `yaml` files for task 4 (fine-tuning and LoRA merging using LLaMA-Factory)
+  - Please exclude large data files and model checkpoints.
