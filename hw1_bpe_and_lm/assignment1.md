@@ -68,7 +68,7 @@ Please `git clone` this repository. If there are any updates, we will notify you
 
 ## How to submit
 
-You will submit the following files to Gradescope:
+You will submit the following files to [Course](course.pku.edu.cn):
 
 - `[Name_ID number_Report].pdf`: Answer all the written questions. Please typeset your responses.
 - `code.zip`: Contains all the code you've written. (Please exclude large data files and model checkpoints)
