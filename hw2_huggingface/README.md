@@ -106,7 +106,7 @@ def get_dataset(dataset_name: str, sep_token: str = '<SEP>'):
 
    Here we use data from SemEval-2014 Task 4 (see [google drive](https://drive.google.com/drive/folders/1H5rmibrg4VfEvM6uqobkrZlGla3xk78-?usp=share_link)). Prepare the dataset as a `DatasetDict` object with 'train' and 'test' items (you don't need to care about the dev set), both of which are `Dataset` object that contains `text` and `label`.
 
-   - Hint 1. `text` and `label` are actually two lists of data (the text list should contain text strings, and label list contains integers $0\sim\#label-1$).
+   - Hint 1. `text` and `label` are actually two lists of data (the text list should contain text strings, and label list contains integers $0\sim$#label-1).
    - Hint 2. Refer to more ABSA task introduction to know how to prepare `text`. There are many ways to format inputs, and you can use `sep_token` to process the raw text.
    - Hint 3. In this dataset, `text` is the term and the description, and `label` is the sentiment polarity.
 
