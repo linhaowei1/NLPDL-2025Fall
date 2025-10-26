@@ -209,32 +209,32 @@ $$
 **Deriving the policy gradient**. How did we get this equation? For completeness, we will give a derivation of this identity below. We will make use of a few identities.
 
 1. The probability of a trajectory is given by
-   
-   $$
+  
+$$
    P(\tau|\theta) = \rho_0(s_0)\Pi_{t=0}^T P(s_{t+1}|s_t,a_t)\pi_\theta(a_t|s_t).
-   $$
+$$
 
    Therefore, the log-probability of a trajectory is:
    
-   $$
+$$
    \log P(\tau|\theta)= \log\rho_0(s_0)+\sum_{t=0}^T [\log P(s_{t+1}|s_t,a_t)+\log \pi_\theta(a_t|s_t)].
-   $$
+$$
 
 2. The log-derivative trick:
    
-   $$
+$$
    \nabla_\theta P = P\nabla_\theta \log P.
-   $$
+$$
 
 3. The environment terms are consistent in $\theta$. $\rho_0, P(\cdot|\cdot)$ and $R(\tau)$ do not depend on the policy parameters, so
    
-   $$
+$$
    \nabla_\theta \rho_0 = \nabla_\theta P = \nabla_\theta R(\tau) = 0.
-   $$
+$$
 
    Applying the facts above:
    
-   $$
+$$
    \begin{aligned}
    \nabla_\theta J(\theta) &= \nabla_\theta \mathbb E_{\tau\sim\pi_\theta}[R(\tau)] \\
    &= \nabla_\theta \sum_{\tau} P(\tau|\theta) R(\tau) \\
@@ -242,21 +242,21 @@ $$
    &= \sum_\tau P(\tau|\theta) \nabla_\theta \log P(\tau|\theta) R(\tau) \\
    &= \mathbb E_{\tau\sim\pi_\theta} [\nabla_\theta \log P(\tau|\theta) R(\tau)]
    \end{aligned}
-   $$
+$$
 
    and therefore, plugging in the log-probability of a trajectory and using the fact that the environment terms are constant in $\theta$, we get the vanilla or REINFORCE policy gradient:
    
-   $$
+$$
    \nabla_\theta J(\pi_\theta) = \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)R(\tau)].
-   $$
+$$
 
    Intuitively, this gradient will increase the log probability of every action in a trajectory that has high return, and decrease them otherwise.
 
    **Sample estimate of the gradient**. Given a batch of N roullouts $\mathcal =\{\tau^{(i)}\}_{i=1}^N$ collected by sampling a starting state $s_0^{(i)}\sim \rho_0(s_0)$ and then running the policy $\pi_\theta$ in the environment, we form an unbiased estimator of the gradient as
    
-   $$
+$$
    \hat g = \frac1N \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta (a_t^{(i)}|s_t^{(i)})R(\tau^{(i)}).
-   $$
+$$
 
    This vector is used in the gradient-ascent update $\theta\leftarrow \theta + \alpha \hat g$.
 
@@ -266,23 +266,23 @@ $$
 
    Let us define the baselined policy gradient as:
    
-   $$
+$$
    B = \mathbb E_{\tau \sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)(R(\tau) - b(s_t))].
-   $$
+$$
 
    As an example, a reasonable baseline is the on-policy value function $V^\pi (s) = \mathbb E_{\tau \sim \pi_\theta}[R(\tau) |s_t=s]$, i.e., the expected return if we start at $s_t=s$ and follow the policy $\pi_\theta$ from there. Then, the quantity $(R(\tau) - V^\pi (s_t))$ is, intuitively, how much better the realized trajectory is than expected.
 
    As long as the baseline depends only on the state, the baselined policy gradient is unbiased. We can see this by rewriting the baselined policy gradient as
    
-   $$
+$$
    B = \mathbb E_{\tau\sim\pi_\theta} [\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)R(\tau)] - \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)b(s_t)].
-   $$
+$$
 
    Focusing on the baseline term, we see that
    
-   $$
+$$
     \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)b(s_t)] = \sum_{t=0}^T \mathbb E_{s_t}[b(s_t)\mathbb E_{a_t\sim \pi_\theta(\cdot|s_t)}\nabla_\theta \log \pi_\theta(a_t|s_t)].
-   $$
+$$
 
    In general, the expectation of the score function is zero: $\mathbb E_{x\sim P_\theta}[\nabla_\theta \log P_\theta(x)]=0$. Therefore, $B = \nabla_\theta J(\pi_\theta)$,
 
@@ -294,9 +294,9 @@ $$
 
    **Off-policy policy gradient**. In off-policy learning, we instead have rollouts sampled from some policy other than the one we are optimizing. Off-policy variants of popular policy gradient algorithms like PPO and GRPO use rollouts from a previous version of the policy $\pi_{\theta_{old}}$ to optimize the current policy $\pi_\theta$. The off-policy policy gradient estimate is
    
-   $$
+$$
    \hat{g}_{off-policy} = \frac1N \sum_{i=1}^N\sum_{t=0}^T \frac{\pi_\theta(a_t^{(i)}|s_t^{(i)})}{\pi_{\theta_{old}}(a_t^{(i)}|s_t^{(i)})}\nabla_\theta\log\pi_\theta(a_t^{(i)}|s_t^{(i)})R(\tau^{(i)})
-   $$
+$$
 
    This looks like an importance sampled version of the vanilla policy gradient. 
 
@@ -308,9 +308,9 @@ $$
 
    **Advantage estimation**. The core idea of GRPO is to sample many outputs for each question from the policy $\pi_\theta$ and use them to compute a baseline. This is convenient because we avoid the need to learn a neural value function $V_\phi(s)$, which can be hard to train and is cumbersome from the systems perspective. For a question $q$ and group outputs $\{o^{(i)}\}_{i=1}^G\sim\pi_\theta(\cdot|q)$, let $r^{(i)}=R(q,o^{(i)})$ be the reward for the $i$-th output. DeepSeekMath and DeepSeek R1 compute the group-normalized reward for the $i$-th output as
    
-   $$
+$$
    A^{(i)} = \frac{r^{(i)}-mean(r^{(1)},r^{(2)},\cdots, r^{(G)})}{std(r^{(1)}, r^{(2)},\cdots, r^{(G)}) + advantage\_eps}\quad (Eq.28)
-   $$
+$$
 
    where $\texttt{advantage\_eps}$ is a small constant to prevent division by zero. Note that this advantage $A^{(i)}$ is the same for each token in the response, i.e., $A_t^{(i)} = A^{(i)}, \forall t\in 1,\cdots, |o^{(i)}|$, so we drop the $t$ subscript in the following.
 
