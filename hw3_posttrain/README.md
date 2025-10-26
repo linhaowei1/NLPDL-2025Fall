@@ -134,9 +134,11 @@ We provide a brief introduction to policy gradients for RL on language models be
 ### 4.1 Language Models as Policies
 
 A causal language model (LM) with parameters $\theta$ defines a probability distribution oveer the next token $a_t\in \mathcal V$ given the current prefix $s_t$ (the state/observation). In the context of RL, we think of the next token $a_t$ as an *action* and the current text prefix $s_t$ as the *state*. Hence, the LM is a categorical stochastic policy
+
 $$
 a_t\sim \pi_\theta(\cdot|s_t), \quad \pi_\theta(a_t|s_t) = [softmax(f_\theta(s_t))]_{a_t}.
 $$
+
 Two primitive operations will be needed in optimizing the policy with policy gradients:
 
 1. Sampling from the policy: drawing an action $a_t$ from the categorical distribution above;
@@ -147,9 +149,11 @@ Generally, when doing RL with LLMs, $s_t$ is the partial completion/solution pro
 ### 4.2 Trajectories
 
 A (finite-horizon) trajectory is the interleaved sequence of states and actions experienced by an agent:
+
 $$
 \tau = (s_0,a_0, s_1, a_1, \cdots, s_T, a_T),
 $$
+
 where $T$ is the length of the trajectory, i.e., $a_T$ is an end-of-text token or we have reached a maximum generation budget in tokens.
 
 The initial state is drawn from the start distribution, $s_0\sim \rho_0(s_0)$; in the case of RL with LLMs, $\rho_0(s_0)$ is a distribution over formatted prompts. In general settings, state transitions follow some environment dynamics $s_{t+1}\sim P(\cdot|s_t,a_t)$. In RL with LLMs, the environment is deterministic: the next state is the old prefix concatenated with the emitted token, $s_{t+1} = s_t||a_t$. Trajectories are also called episodes or rollouts; we will use these terms interchangeably.
@@ -157,24 +161,33 @@ The initial state is drawn from the start distribution, $s_0\sim \rho_0(s_0)$; i
 ### 4.3 Rewards and Return
 
 A scalar reward $r_t= R(s_t,a_t)$ judges the immediate quality of the action taken at state $s_t$. For RL on verified domains, it is standard to assign zero reward to intermediate steps and a verified reward to the terminal action
+
 $$
 R_T = R(S_T,a_T):= 1[\text{if the trajectory $s_T\|a_T$ matches the ground-truth according to our reward function}]
 $$
+
  1[.] is an indicator function. The return $R(\tau)$ aggregates rewards along the trajectory. Two common choices are finite-horizon undiscounted returns
+
 $$
 R(\tau) := \sum_{t=0}^T r_t,
 $$
+
 and infinite-horizon discounted returns,
+
 $$
 R(\tau):=\sum_{t=0}^\infty \gamma^tr_t, 0<\gamma <1.
 $$
+
 In our case, we will use the undiscounted formulation since episodes have a natural termination point (end-of-text or max generation length).
 
 The objective of the agent is to maximize the expected return
+
 $$
 J(\theta) = \mathbb E_{\tau\sim \pi_\theta}[R(\tau)],
 $$
+
 leading to the optimization problem
+
 $$
 \theta^* = \arg\max_\theta J(\theta).
 $$
@@ -182,34 +195,45 @@ $$
 ### 4.4 Vanilla Policy Gradient
 
 Next, let us attempt to learn policy parameters $\theta$ with gradient ascent on the expected return:
+
 $$
 \theta_{k+1} == \theta_k + \alpha \nabla_\theta J(\theta_k).
 $$
+
 The core identity that we will use to do this is the REINFORCE policy gradient, shown below.
+
 $$
 \nabla_\theta J(\pi_\theta) = \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log\pi_\theta(a_t|s_t) R(\tau)].
 $$
+
 **Deriving the policy gradient**. How did we get this equation? For completeness, we will give a derivation of this identity below. We will make use of a few identities.
 
 1. The probability of a trajectory is given by
+   
    $$
    P(\tau|\theta) = \rho_0(s_0)\Pi_{t=0}^T P(s_{t+1}|s_t,a_t)\pi_\theta(a_t|s_t).
    $$
+
    Therefore, the log-probability of a trajectory is:
+   
    $$
    \log P(\tau|\theta)= \log\rho_0(s_0)+\sum_{t=0}^T [\log P(s_{t+1}|s_t,a_t)+\log \pi_\theta(a_t|s_t)].
    $$
 
 2. The log-derivative trick:
+   
    $$
    \nabla_\theta P = P\nabla_\theta \log P.
    $$
 
 3. The environment terms are consistent in $\theta$. $\rho_0, P(\cdot|\cdot)$ and $R(\tau)$ do not depend on the policy parameters, so
+   
    $$
    \nabla_\theta \rho_0 = \nabla_\theta P = \nabla_\theta R(\tau) = 0.
    $$
+
    Applying the facts above:
+   
    $$
    \begin{aligned}
    \nabla_\theta J(\theta) &= \nabla_\theta \mathbb E_{\tau\sim\pi_\theta}[R(\tau)] \\
@@ -219,16 +243,21 @@ $$
    &= \mathbb E_{\tau\sim\pi_\theta} [\nabla_\theta \log P(\tau|\theta) R(\tau)]
    \end{aligned}
    $$
+
    and therefore, plugging in the log-probability of a trajectory and using the fact that the environment terms are constant in $\theta$, we get the vanilla or REINFORCE policy gradient:
+   
    $$
    \nabla_\theta J(\pi_\theta) = \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)R(\tau)].
    $$
+
    Intuitively, this gradient will increase the log probability of every action in a trajectory that has high return, and decrease them otherwise.
 
    **Sample estimate of the gradient**. Given a batch of N roullouts $\mathcal =\{\tau^{(i)}\}_{i=1}^N$ collected by sampling a starting state $s_0^{(i)}\sim \rho_0(s_0)$ and then running the policy $\pi_\theta$ in the environment, we form an unbiased estimator of the gradient as
+   
    $$
    \hat g = \frac1N \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta (a_t^{(i)}|s_t^{(i)})R(\tau^{(i)}).
    $$
+
    This vector is used in the gradient-ascent update $\theta\leftarrow \theta + \alpha \hat g$.
 
    ### 4.3 Policy Gradient Baselines
@@ -236,19 +265,25 @@ $$
    The main issue with vanilla policy gradient is the high variance of the gradient estimate. A common technique to mitigate this is to subtract from the reward a *baseline* function $b$ that depends only on the state. This is a type of *control variate*: The idea is to decrease the variance of the estimator by subtracting a term that is correlated with it, without introducing bias.
 
    Let us define the baselined policy gradient as:
+   
    $$
    B = \mathbb E_{\tau \sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)(R(\tau) - b(s_t))].
    $$
+
    As an example, a reasonable baseline is the on-policy value function $V^\pi (s) = \mathbb E_{\tau \sim \pi_\theta}[R(\tau) |s_t=s]$, i.e., the expected return if we start at $s_t=s$ and follow the policy $\pi_\theta$ from there. Then, the quantity $(R(\tau) - V^\pi (s_t))$ is, intuitively, how much better the realized trajectory is than expected.
 
    As long as the baseline depends only on the state, the baselined policy gradient is unbiased. We can see this by rewriting the baselined policy gradient as
+   
    $$
    B = \mathbb E_{\tau\sim\pi_\theta} [\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)R(\tau)] - \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)b(s_t)].
    $$
+
    Focusing on the baseline term, we see that
+   
    $$
     \mathbb E_{\tau\sim\pi_\theta}[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t)b(s_t)] = \sum_{t=0}^T \mathbb E_{s_t}[b(s_t)\mathbb E_{a_t\sim \pi_\theta(\cdot|s_t)}\nabla_\theta \log \pi_\theta(a_t|s_t)].
    $$
+
    In general, the expectation of the score function is zero: $\mathbb E_{x\sim P_\theta}[\nabla_\theta \log P_\theta(x)]=0$. Therefore, $B = \nabla_\theta J(\pi_\theta)$,
 
    so we conclude that the baselined policy gradient is unbiased.
@@ -258,9 +293,11 @@ $$
    REINFORCE is an *on-policy* algorithm: the training data is collected by the same policy that we are optimizing. We need to do a lot of inference to sample a new batch of rollouts, only to take just one gradient step. The behavior of an LM generally cannot change significantly in a single step, so this on-policy approach is highly inefficient.
 
    **Off-policy policy gradient**. In off-policy learning, we instead have rollouts sampled from some policy other than the one we are optimizing. Off-policy variants of popular policy gradient algorithms like PPO and GRPO use rollouts from a previous version of the policy $\pi_{\theta_{old}}$ to optimize the current policy $\pi_\theta$. The off-policy policy gradient estimate is
+   
    $$
    \hat{g}_{off-policy} = \frac1N \sum_{i=1}^N\sum_{t=0}^T \frac{\pi_\theta(a_t^{(i)}|s_t^{(i)})}{\pi_{\theta_{old}}(a_t^{(i)}|s_t^{(i)})}\nabla_\theta\log\pi_\theta(a_t^{(i)}|s_t^{(i)})R(\tau^{(i)})
    $$
+
    This looks like an importance sampled version of the vanilla policy gradient. 
 
    ## 5. GRPO
@@ -270,9 +307,11 @@ $$
    ### 5.1 GRPO Algorithm
 
    **Advantage estimation**. The core idea of GRPO is to sample many outputs for each question from the policy $\pi_\theta$ and use them to compute a baseline. This is convenient because we avoid the need to learn a neural value function $V_\phi(s)$, which can be hard to train and is cumbersome from the systems perspective. For a question $q$ and group outputs $\{o^{(i)}\}_{i=1}^G\sim\pi_\theta(\cdot|q)$, let $r^{(i)}=R(q,o^{(i)})$ be the reward for the $i$-th output. DeepSeekMath and DeepSeek R1 compute the group-normalized reward for the $i$-th output as
+   
    $$
    A^{(i)} = \frac{r^{(i)}-mean(r^{(1)},r^{(2)},\cdots, r^{(G)})}{std(r^{(1)}, r^{(2)},\cdots, r^{(G)}) + advantage\_eps}\quad (Eq.28)
    $$
+
    where $\texttt{advantage\_eps}$ is a small constant to prevent division by zero. Note that this advantage $A^{(i)}$ is the same for each token in the response, i.e., $A_t^{(i)} = A^{(i)}, \forall t\in 1,\cdots, |o^{(i)}|$, so we drop the $t$ subscript in the following.
 
    **GRPO objective**. The GRPO objective combines three ideas:
@@ -286,26 +325,34 @@ $$
    The GRPO-Clip objective uses a min function to clip the probability ratio, preventing the policy from deviating too far from the old policy during training.
 
 Let us first write out the full GRPO-Clip objective, and then we can build some intuition on what the clipping does (Eq.29):
+
 $$
 \begin{align*}
 J_{GRPO-Clip}(\theta) &= E_{q\sim \mathcal D, \{o^{(i)}\}_{i=1}^G \sim \pi_\theta(\cdot|q)}\\&[\frac1G\sum_{i=1}^G \frac1{|o^{(i)}|}\sum_{t=1}^{|o^{(i)|}}\min (\frac{\pi_\theta(o_t^{(i)}|q,o_{<t}^{(i)})}{\pi_{\theta_{old}}(o_t^{(i)} |q,o_{<t}^{(i)})}A^{(i)}, clip(\frac{\pi_\theta(o_t^{(i)}|q,o_{<t}^{(i)})}{\pi_{\theta_{old}}(o_t^{(i)} |q,o_{<t}^{(i)})},1-\epsilon, 1+\epsilon)A^{(i)})]
 \end{align*}
 $$
+
 The hyperparameter $\epsilon>0$ controls how much the policy can change. To see this, we can rewrite the per-token objective in a more intuitive way. Define the function
+
 $$
 g(\epsilon, A^{(i)}) = \begin{cases}
 (1+\epsilon) A^{(i)} \quad \text{if }A^{(i)}\ge 0\\
 (1-\epsilon) A^{(i)} \quad \text{if }A^{(i)} <0
 \end{cases} 
 $$
+
 We can rewrite the per-token objective as
+
 $$
 \text{per-token objective} = \min (\frac{\pi_\theta(o_t^{(i)}|q,o_{<t}^{(i)})}{\pi_{\theta_{old}}(o_t^{(i)} |q,o_{<t}^{(i)})}A^{(i)}, g(\epsilon, A^{(i)}))
 $$
+
 We can now reason by cases. When the advantage $A^{(i)}$ is positive, the per-token objective simplifies to
+
 $$
 \text{per-token objective} = \min (\frac{\pi_\theta(o_t^{(i)}|q,o_{<t}^{(i)})}{\pi_{\theta_{old}}(o_t^{(i)} |q,o_{<t}^{(i)})}, 1+\epsilon) A^{(i)}
 $$
+
 Since $A^{(i)}>0$, the objective goes up if the action $o_t^{(i)}$ becomes more likely under $\pi_\theta$, i.e., if $\pi_\theta (o_t^{(i)}|q, o_{<t}^{(i)})$ increases. The clipping with min limits how much the objective can increase. So the policy $\pi_\theta$ is not incentivized to go very far from the old policy $\pi_{\theta_{old}}$.
 
 Analogously, when the advantage is negative, the model tries to drive down $\pi_\theta(o_t^{(i)}|q,o_{<t}^{(i)})$, but is not incentivized to decrease it below $(1-\epsilon)\pi_{\theta_{old}}(o_t^{(i)}|q,o_{<t}^{(i)})$.
@@ -317,9 +364,11 @@ Now that we have a high-level understanding of the GRPO training loop and object
 **Computing advantages (group-normalized rewards).** First, we will implement the logic to compute advantages for each example in a rollout batch, i.e., the group-normalized rewards. We will consider two possible ways to obtain group-normalized rewards: the approach presented in Eq. 28, and a recent simplified approach.
 
 Dr. GRPO [Liu et al., 2025] highlights that normalizing by $\text{std}(r^{(1)}, r^{(2)}, \cdots, r^{(G)})$ rewards questions in a batch with low variation in answer correctness, which may not be desirable. They propose simply removing the normalization step, computing
+
 $$
 A^{(i)} = r^{(i)} - \text{mean}(r^{(1)},r^{(2)},\cdots, r^{(G)}).
 $$
+
 We will implement both variants and compare their performance later in the assignment.
 
 > Problem 3: Group normalization
@@ -360,6 +409,7 @@ We will implement both variants and compare their performance later in the assig
 As a reminder/disclaimer, these are not really losses in the canonical sense and should not be reported as evaluation metrics. When it comes to RL, you should instead track the train and validation returns, among other metrics.
 
 We will start with the naive policy gradient loss, which simply multiplies the advantage by the log probability of actions (and negates). With question $q$, response $o$, and response token $o_t$, the naive per-token policy gradient loss is
+
 $$
 -A_t\cdot \log p_\theta(o_t|q,o_{<t}).
 $$
@@ -405,6 +455,7 @@ $$
 
 
  The per-token GRPO-Clip loss is
+
 $$
 -\min(\frac{\pi_\theta(o_t \mid q, o_{<t})}{\pi_{\text{old}}(o_t \mid q, o_{<t})}A_t, clip(\frac{\pi_\theta(o_t \mid q, o_{<t})}{\pi_{\text{old}}(o_t \mid q, o_{<t})},1-\epsilon, 1+\epsilon)A_t).
 $$
@@ -814,6 +865,7 @@ Now we can use the number of epochs and optimizer updates per rollout batch to c
 > - **Hint:** you will need to change `gradient_accumulation_steps` to keep memory usage constant.
 
 **Ablating clipping in the off-policy setting.** Recall that the purpose of clipping in GRPO-Clip is to prevent the policy from moving too far away from the old policy when taking many gradient steps on a single rollout batch. Next, we will ablate clipping in the off-policy setting to test to what extent it is actually necessary. In other words, we will use per-token loss
+
 $$
 -\frac{\pi_\theta(o_t|q,o_{<t})}{\pi_{\theta_{old}}(o_t|q,o_{<t})}A_t.
 $$
