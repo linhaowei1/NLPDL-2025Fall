@@ -938,7 +938,7 @@ Run the output through the evaluator. It will likely fail or give a very small s
 
 2. Agentic Refinement
 
-This is where the real discovery begins. Treat the evaluator as a tool in an agentic loop (similar to the method in the paper you were given, [arXiv:2507.15855]).
+This is where the real discovery begins. Treat the evaluator as a tool in an agentic loop (similar to the method in the paper [arXiv:2507.15855]).
 
 - **Step 1: Generate.** Prompt the LLM to generate a Python script with a candidate set `points`.
 
