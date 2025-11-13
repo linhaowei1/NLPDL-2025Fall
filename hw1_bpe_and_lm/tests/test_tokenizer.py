@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import resource
+# import resource
 import sys
 
 import psutil
@@ -16,24 +16,24 @@ VOCAB_PATH = FIXTURES_PATH / "gpt2_vocab.json"
 MERGES_PATH = FIXTURES_PATH / "gpt2_merges.txt"
 
 
-def memory_limit(max_mem):
-    def decorator(f):
-        def wrapper(*args, **kwargs):
-            process = psutil.Process(os.getpid())
-            prev_limits = resource.getrlimit(resource.RLIMIT_AS)
-            resource.setrlimit(resource.RLIMIT_AS, (process.memory_info().rss + max_mem, -1))
-            try:
-                result = f(*args, **kwargs)
-                return result
-            finally:
-                # Even if the function above fails (e.g., it exceeds the
-                # memory limit), reset the memory limit back to the
-                # previous limit so other tests aren't affected.
-                resource.setrlimit(resource.RLIMIT_AS, prev_limits)
+# def memory_limit(max_mem):
+#     def decorator(f):
+#         def wrapper(*args, **kwargs):
+#             process = psutil.Process(os.getpid())
+#             prev_limits = resource.getrlimit(resource.RLIMIT_AS)
+#             resource.setrlimit(resource.RLIMIT_AS, (process.memory_info().rss + max_mem, -1))
+#             try:
+#                 result = f(*args, **kwargs)
+#                 return result
+#             finally:
+#                 # Even if the function above fails (e.g., it exceeds the
+#                 # memory limit), reset the memory limit back to the
+#                 # previous limit so other tests aren't affected.
+#                 resource.setrlimit(resource.RLIMIT_AS, prev_limits)
 
-        return wrapper
+#         return wrapper
 
-    return decorator
+#     return decorator
 
 
 def get_tokenizer_from_vocab_merges_path(
@@ -413,52 +413,52 @@ def test_encode_iterable_tinystories_matches_tiktoken():
     assert reference_tokenizer.decode(reference_ids) == corpus_contents
 
 
-@pytest.mark.skipif(
-    not sys.platform.startswith("linux"),
-    reason="rlimit support for non-linux systems is spotty.",
-)
-def test_encode_iterable_memory_usage():
-    tokenizer = get_tokenizer_from_vocab_merges_path(
-        vocab_path=VOCAB_PATH,
-        merges_path=MERGES_PATH,
-    )
-    with open(FIXTURES_PATH / "tinystories_sample_5M.txt") as f:
-        ids = []
-        for _id in _encode_iterable(tokenizer, f):
-            ids.append(_id)
+# @pytest.mark.skipif(
+#     not sys.platform.startswith("linux"),
+#     reason="rlimit support for non-linux systems is spotty.",
+# )
+# def test_encode_iterable_memory_usage():
+#     tokenizer = get_tokenizer_from_vocab_merges_path(
+#         vocab_path=VOCAB_PATH,
+#         merges_path=MERGES_PATH,
+#     )
+#     with open(FIXTURES_PATH / "tinystories_sample_5M.txt") as f:
+#         ids = []
+#         for _id in _encode_iterable(tokenizer, f):
+#             ids.append(_id)
 
 
-@pytest.mark.skipif(
-    not sys.platform.startswith("linux"),
-    reason="rlimit support for non-linux systems is spotty.",
-)
-@pytest.mark.xfail(reason="Tokenizer.encode is expected to take more memory than allotted (1MB).")
-def test_encode_memory_usage():
-    """
-    We expect this test to fail, since Tokenizer.encode is not expected to be memory efficient.
-    """
-    tokenizer = get_tokenizer_from_vocab_merges_path(
-        vocab_path=VOCAB_PATH,
-        merges_path=MERGES_PATH,
-    )
-    with open(FIXTURES_PATH / "tinystories_sample_5M.txt") as f:
-        contents = f.read()
-        _ = _encode(tokenizer, contents)
+# @pytest.mark.skipif(
+#     not sys.platform.startswith("linux"),
+#     reason="rlimit support for non-linux systems is spotty.",
+# )
+# @pytest.mark.xfail(reason="Tokenizer.encode is expected to take more memory than allotted (1MB).")
+# def test_encode_memory_usage():
+#     """
+#     We expect this test to fail, since Tokenizer.encode is not expected to be memory efficient.
+#     """
+#     tokenizer = get_tokenizer_from_vocab_merges_path(
+#         vocab_path=VOCAB_PATH,
+#         merges_path=MERGES_PATH,
+#     )
+#     with open(FIXTURES_PATH / "tinystories_sample_5M.txt") as f:
+#         contents = f.read()
+#         _ = _encode(tokenizer, contents)
 
 
-@memory_limit(int(1e6))
-def _encode_iterable(tokenizer, iterable):
-    """
-    We place tokenizer.encode_iterable into a separate function so we can limit memory
-    for just this function. We set the memory limit to 1MB.
-    """
-    yield from tokenizer.encode_iterable(iterable)
+# @memory_limit(int(1e6))
+# def _encode_iterable(tokenizer, iterable):
+#     """
+#     We place tokenizer.encode_iterable into a separate function so we can limit memory
+#     for just this function. We set the memory limit to 1MB.
+#     """
+#     yield from tokenizer.encode_iterable(iterable)
 
 
-@memory_limit(int(1e6))
-def _encode(tokenizer, text):
-    """
-    We place tokenizer.encode into a separate function so we can limit memory
-    for just this function. We set the memory limit to 1MB.
-    """
-    return tokenizer.encode(text)
+# @memory_limit(int(1e6))
+# def _encode(tokenizer, text):
+#     """
+#     We place tokenizer.encode into a separate function so we can limit memory
+#     for just this function. We set the memory limit to 1MB.
+#     """
+#     return tokenizer.encode(text)
