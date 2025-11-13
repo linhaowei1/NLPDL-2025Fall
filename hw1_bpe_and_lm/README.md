@@ -108,7 +108,7 @@ Unicode is a text encoding standard that maps characters to integer code points.
 >
 > **(a)** What Unicode character does chr(0) return? 
 >
-> **(b)** How does this character’s string representation (`__repr()__`) differ from its printed representation?
+> **(b)** How does this character’s string representation (`__repr__()`) differ from its printed representation?
 >
 > **(c)** What happens when this character occurs in text? It may be helpful to play around with the following in your Python interpreter and see if it matches your expectations:
 > ```python
@@ -1092,7 +1092,7 @@ $$
 >uv run pytest -k test_transformer_block
 >```
 
-Now we put the blocks together. Following our description of the embedding in Section 3.1.1, feed this into `num_layers` Transformer blocks, and then pass that into the three output layers (final RMSNorm, linear projection, softmax function) to obtain a distribution over the vocabulary.
+Now we put the blocks together. Following our description of the embedding in Section 3.1.1, feed this into `num_layers` Transformer blocks, and then pass that into the two output layers (final RMSNorm, linear projection) to obtain a distribution (logits) over the vocabulary.
 
 >**Problem 3.4.2: Implementing the Transformer LM (3 points)**
 >
@@ -1471,7 +1471,7 @@ for t in range(100):
     opt.step()  # Run optimizer
 ```
 
-This is the typical structure of a training loop: in each iteration, we will compute the loss and run a step of the optimizer. When training language models, our learnable parameters will come from the model (in PyTorch, `m.parameters()` gives us this collection). The loss will be computed over a sampled batch of data, but the basic structure of the training loop will be the
+This is the typical structure of a training loop: in each iteration, we will compute the loss and run a step of the optimizer. When training language models, our learnable parameters will come from the model (in PyTorch, `m.parameters()` gives us this collection). The loss will be computed over a batch of data sampled per iteration, but the basic structure of the training loop will remain the same throughout training.
 
 
 
@@ -1485,7 +1485,7 @@ This is the typical structure of a training loop: in each iteration, we will com
 
 Modern language models are typically trained with more sophisticated optimizers, instead of SGD. Most optimizers used recently are derivatives of the Adam optimizer [Kingma and Ba, 2015]. We will use AdamW [Loshchilov and Hutter, 2019], which is in wide use in recent work. AdamW proposes a modification to Adam that improves regularization by adding weight decay (at each iteration, we pull the parameters towards 0), in a way that is decoupled from the gradient update. We will implement AdamW as described in algorithm 2 of Loshchilov and Hutter [2019].
 
-AdamW is stateful: for each parameter, it keeps track of a running estimate of its first and second moments. Thus, AdamW uses additional memory in exchange for improved stability and convergence. Besides the learning rate $\alpha$, AdamW has a pair of hyperparameters $(\beta_1, \beta_2)$ that control the updates to the moment estimates, and a weight decay rate $\lambda$. Typical applications set $(\beta_1, \beta_2)$ to (0.9, 0.999), but large language models like LLaMA [Touvron et al., 2023] and GPT-3 [Brown et al., 2020] are often trained with . The algorithm can be written as follows, where $\varepsilon$ is a small value (e.g., $10^{-8}$) used to improve numerical stability in case we get extremely small values in $v$:
+AdamW is stateful: for each parameter, it keeps track of a running estimate of its first and second moments. Thus, AdamW uses additional memory in exchange for improved stability and convergence. Besides the learning rate $\alpha$, AdamW has a pair of hyperparameters $(\beta_1, \beta_2)$ that control the updates to the moment estimates, and a weight decay rate $\lambda$. Typical applications set $(\beta_1, \beta_2)$ to (0.9, 0.999), but large language models like LLaMA [Touvron et al., 2023] and GPT-3 [Brown et al., 2020] are often trained with (0.9, 0.95). The algorithm can be written as follows, where $\varepsilon$ is a small value (e.g., $10^{-8}$) used to improve numerical stability in case we get extremely small values in $v$:
 
 ### Algorithm 1 AdamW Optimizer
 
@@ -1498,7 +1498,7 @@ for t = 1, ..., T do
     g ← ∇θl(θ; Bt)                         (Compute the gradient of the loss at the current time step)
     m ← β1m + (1 − β1)g                    (Update the first moment estimate)
     v ← β2v + (1 − β2)g^2                  (Update the second moment estimate)
-    αt ← α √{(1 − (β2)^t) / (1 − (β1)^t)}  (Compute adjusted α for iteration t)
+    αt ← α √{(1 − (β2)^t)} / (1 − (β1)^t)  (Compute adjusted α for iteration t)
     θ ← θ − αt m / (√v + ε)                (Update the parameters)
     θ ← θ − αλθ                            (Apply weight decay)
 end for
@@ -1536,7 +1536,7 @@ Note that $t$ starts at 1. You will now implement this optimizer.
 >
 > **Deliverable**: An algebraic expression for each of parameters, activations, gradients, and optimizer state, as well as the total.
 >
-> (b) Instantiate your answer for a GPT-2XL-shaped model to get an expression that only depends on the `batchsize`. What is the maximum batch size you can use and still fit within 80GB memory?
+> (b) Instantiate your answer for a GPT-2XL-shaped model to get an expression that only depends on the `batchsize`. What is the maximum batch size you can use and still fit within 80GB memory? (Please take the hyperparameters (such as `num_layers`, `d_model`, etc) of GPT-2 XL, while keeping the architecture described above (i.e. RMSNorm & bias-less & no-parameter-tie).)
 >
 > **Deliverable**: An expression that looks like $a \cdot \text{batchsize} + b$ for numerical values $a, b$, and a number representing the maximum batch size.
 >
@@ -1552,7 +1552,7 @@ Note that $t$ starts at 1. You will now implement this optimizer.
 
 ## 4.4 Learning rate scheduling
 
-The value for the learning rate that leads to the quickest decrease in loss often varies during training. In training Transformers, it is typical to use a learning rate schedule, where we start with a bigger learning rate, making quicker updates in the beginning, and slowly decay it to a smaller value as the trains8
+The value for the learning rate that leads to the quickest decrease in loss often varies during training. In training Transformers, it is typical to use a learning rate schedule, where we start with a bigger learning rate, making quicker updates in the beginning, and slowly decay it to a smaller value as the model trains.
 
 In this assignment, we will implement the cosine annealing schedule used to train LLaMA [Touvron et al., 2023].
 
@@ -1648,7 +1648,7 @@ Loading data in this way simplifies training for a number of reasons. First, any
 
 ## 5.2 Checkpointing
 
-In addition to loading data, we will also need to save models as we train. When running jobs, we often want to be able to resume a training run that for some reason stopped midway (e.g., due to your job timing out, machine failure, etc). Even when all goes well, we might also want to later have access to intermediate models (e.g., to study training dynamics post-hoc, take samples from models at different stages of training,
+In addition to loading data, we will also need to save models as we train. When running jobs, we often want to be able to resume a training run that for some reason stopped midway (e.g., due to your job timing out, machine failure, etc). Even when all goes well, we might also want to later have access to intermediate models (e.g., to study training dynamics post-hoc, take samples from models at different stages of training, etc).
 
 A checkpoint should have all the states that we need to resume training. We of course want to be able to restore model weights at a minimum. If using a stateful optimizer (such as AdamW), we will also need to save the optimizer's state (e.g., in the case of AdamW, the moment estimates). Finally, to resume the learning rate schedule, we will need to know the iteration number we stopped at. PyTorch makes it easy to save all of these: every `nn.Module` has a `state_dict()` method that returns a dictionary with all learnable weights; we can restore these weights later with the sister method `load_state_dict()`. The same goes for any `nn.optim.Optimizer`. Finally, `torch.save(obj, dest)` can dump an object (e.g., a dictionary containing tensors in some values, but also regular Python objects like integers) to a file (path) or file-like object, which can then be loaded back into memory with
 
