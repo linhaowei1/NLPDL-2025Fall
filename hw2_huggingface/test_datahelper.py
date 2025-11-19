@@ -11,10 +11,10 @@ def test_restaurant():
     raw_dataset = get_dataset("restaurant_sup", sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(3)))
-    assert set(test["label"]).issubset(set(range(3)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(3)))
+    assert set(test["labels"]).issubset(set(range(3)))
 
 
 def test_laptop():
@@ -24,10 +24,10 @@ def test_laptop():
     raw_dataset = get_dataset("laptop_sup", sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(3)))
-    assert set(test["label"]).issubset(set(range(3)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(3)))
+    assert set(test["labels"]).issubset(set(range(3)))
 
 
 def test_acl():
@@ -37,10 +37,10 @@ def test_acl():
     raw_dataset = get_dataset("acl_sup", sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(6)))
-    assert set(test["label"]).issubset(set(range(6)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(6)))
+    assert set(test["labels"]).issubset(set(range(6)))
 
 
 def test_agnews():
@@ -50,10 +50,10 @@ def test_agnews():
     raw_dataset = get_dataset("agnews_sup", sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(4)))
-    assert set(test["label"]).issubset(set(range(4)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(4)))
+    assert set(test["labels"]).issubset(set(range(4)))
 
 
 def test_restaurant_fs():
@@ -63,10 +63,10 @@ def test_restaurant_fs():
     raw_dataset = get_fs("restaurant", sep_token="<SEP>", sample_size=32)
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) == 32 and len(test) == 32
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(3)))
-    assert set(test["label"]).issubset(set(range(3)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(3)))
+    assert set(test["labels"]).issubset(set(range(3)))
 
 
 def test_laptop_fs():
@@ -76,10 +76,10 @@ def test_laptop_fs():
     raw_dataset = get_fs("laptop", sep_token="<SEP>", sample_size=32)
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) == 32 and len(test) == 32
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(3)))
-    assert set(test["label"]).issubset(set(range(3)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(3)))
+    assert set(test["labels"]).issubset(set(range(3)))
 
 
 def test_acl_fs():
@@ -89,10 +89,10 @@ def test_acl_fs():
     raw_dataset = get_fs("acl_fs", sep_token="<SEP>", sample_size=32)
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) == 32 and len(test) == 32
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(6)))
-    assert set(test["label"]).issubset(set(range(6)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(6)))
+    assert set(test["labels"]).issubset(set(range(6)))
 
 
 def test_agnews_fs():
@@ -102,10 +102,10 @@ def test_agnews_fs():
     raw_dataset = get_fs("agnews", sep_token="<SEP>", sample_size=32)
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) == 32 and len(test) == 32
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(4)))
-    assert set(test["label"]).issubset(set(range(4)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(4)))
+    assert set(test["labels"]).issubset(set(range(4)))
 
 
 def test_aggregation_1():
@@ -113,20 +113,20 @@ def test_aggregation_1():
                               sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(6)))
-    assert set(test["label"]).issubset(set(range(6)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(6)))
+    assert set(test["labels"]).issubset(set(range(6)))
 
 
 def test_aggregation_2():
     raw_dataset = get_dataset(["acl_sup", "laptop_sup"], sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(10)))
-    assert set(test["label"]).issubset(set(range(10)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(10)))
+    assert set(test["labels"]).issubset(set(range(10)))
 
 
 def test_aggregation_3():
@@ -135,7 +135,7 @@ def test_aggregation_3():
         sep_token="<SEP>")
     train, test = raw_dataset["train"], raw_dataset["test"]
     assert len(train) > 0 and len(test) > 0
-    assert "text" in train.column_names and "label" in train.column_names
-    assert "text" in test.column_names and "label" in test.column_names
-    assert set(train["label"]).issubset(set(range(16)))
-    assert set(test["label"]).issubset(set(range(16)))
+    assert "text" in train.column_names and "labels" in train.column_names
+    assert "text" in test.column_names and "labels" in test.column_names
+    assert set(train["labels"]).issubset(set(range(16)))
+    assert set(test["labels"]).issubset(set(range(16)))

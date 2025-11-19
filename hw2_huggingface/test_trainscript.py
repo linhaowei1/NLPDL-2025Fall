@@ -81,4 +81,4 @@ def test_compute_metrics():
     assert abs(metrics["accuracy"] - expected_accuracy) < 1e-3
     assert abs(metrics["macro_f1"] - expected_macro_f1) < 1e-3
     assert abs(metrics["micro_f1"] - expected_micro_f1) < 1e-3
-    assert abs(metrics["weighted_f1"] - expected_weighted_f1) < 1e-3
+    assert abs(metrics["weight_f1"] - expected_weighted_f1) < 1e-3

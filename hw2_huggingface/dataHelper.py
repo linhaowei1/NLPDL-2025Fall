@@ -3,6 +3,7 @@
 import os
 import json
 import random
+from typing import List
 from datasets import Dataset, DatasetDict, load_dataset
 
 ## * You can add more helper functions or modify function arguments if needed
@@ -48,7 +49,7 @@ def get_fs(dataset_name: str, sep_token: str, sample_size: int):
     raise NotImplementedError("The 'get_fs' function is not yet implemented.")
 
 ## ! DO NOT change the function name or arguments
-def get_dataset(dataset_name: str, sep_token: str) -> DatasetDict:
+def get_dataset(dataset_name: str | List[str], sep_token: str) -> DatasetDict:
     '''
 	dataset_name: str, the name of the dataset
 	sep_token: str, the sep_token used by tokenizer(e.g. '<sep>')
@@ -62,7 +63,7 @@ def get_dataset(dataset_name: str, sep_token: str) -> DatasetDict:
         raise NotImplementedError(
             "The 'get_dataset' function is not yet implemented.")
 
-    elif isinstance(dataset_name, list):
+    elif isinstance(dataset_name, List):
         ## TODO: implement for aggregation
         raise NotImplementedError(
             "The 'get_dataset' function for aggregation is not yet implemented."
