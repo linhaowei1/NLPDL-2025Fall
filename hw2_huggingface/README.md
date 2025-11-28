@@ -156,8 +156,8 @@ Please use all the packages, functions or classes mentioned below in your traini
 
 After you finish the script,
 
-- Use `bert-base-uncased`, `facebook/bart-base` and `Qwen/Qwen1.5-0.5B` as your base model.
-- Use `restaurant_sup`, `acl_sup` and `agnew_sup` as your datasets.
+- Use `bert-base-uncased`, `facebook/bart-large` and `Qwen/Qwen1.5-0.5B` as your base model.
+- Use `restaurant_sup`, `acl_sup` and `agnews_sup` as your datasets.
 - To make the results reliable, you need to run the same experiments several times and report the standard deviation.
 - Adjust the batch size, epoch number and learning rate to make your results converge stably.
   > These models are highly capable and have been pre-trained on a large scale of data. Set a **small learning rate** and run **few epoches** to avoid overfitting or even catastrophic forgetting!
