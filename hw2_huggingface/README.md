@@ -198,7 +198,9 @@ Nowadays, there are more easy-to-operate frameworks available for training or in
    - You can find example files in `LLama-Factory/examples/merge_lora`.
 5. Start the engine to fine-tune your model.
 6. Implement `eval.py` to calculate `BLEU`, `ROUGE-L` and `BERTScore-F1`, and run your evaluation on the test set.
-   - Set `facebook/bart-large` as the scoring model of `BERTScore`
+   - Calculate `BLEU` with `nltk` or `sacrebleu`. The result is different, why?
+   - Calculate `ROUGE-L` with `rouge` or `rouge_score`.
+   - Set `facebook/bart-large` as the scoring model of `BERTScore`.
    - `bert_score` package supports batch process of multiple reference-candidate pairs, but please be aware that many other packages can only process one pair per function call.
 
 After finish the tasks, you should copy your written `yaml` files for training and merging to `hw2_huggingface` directory. Record your training process by inserting images from `wandb` in your report.
